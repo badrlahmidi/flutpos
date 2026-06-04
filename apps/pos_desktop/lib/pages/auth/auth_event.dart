@@ -1,10 +1,21 @@
 import 'package:equatable/equatable.dart';
 
+import 'auth_state.dart';
+
 sealed class AuthEvent extends Equatable {
   const AuthEvent();
 
   @override
   List<Object?> get props => [];
+}
+
+final class AuthModeChanged extends AuthEvent {
+  const AuthModeChanged(this.mode);
+
+  final AuthScreenMode mode;
+
+  @override
+  List<Object?> get props => [mode];
 }
 
 /// Saisie d'un chiffre (0–9).
@@ -28,4 +39,14 @@ final class AuthPinClearPressed extends AuthEvent {
 /// Validation du PIN saisi (bouton OK ou longueur minimale atteinte).
 final class AuthPinSubmitPressed extends AuthEvent {
   const AuthPinSubmitPressed();
+}
+
+/// Pointage entrée (mode RH, sans ouvrir la caisse).
+final class AuthClockInRequested extends AuthEvent {
+  const AuthClockInRequested();
+}
+
+/// Pointage sortie (mode RH).
+final class AuthClockOutRequested extends AuthEvent {
+  const AuthClockOutRequested();
 }

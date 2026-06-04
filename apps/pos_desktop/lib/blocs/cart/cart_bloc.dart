@@ -40,13 +40,42 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         ));
         return;
       }
-      final order = await _orderRepository.createOrder(
-        sessionId: session.id,
-        waiterId: event.user.id,
-        orderType: OrderType.dineIn,
-      );
+
       _cashierId = event.user.id;
-      _orderId = order.id;
+
+      if (event.existingOrderId != null) {
+        final existing =
+            await _orderRepository.getCompleteOrder(event.existingOrderId!);
+        if (existing == null) {
+          emit(const CartError('Ticket introuvable'));
+          return;
+        }
+        _orderId = existing.order.id;
+      } else if (event.deliverySource != null) {
+        final order = await _orderRepository.createDeliveryOrder(
+          sessionId: session.id,
+          waiterId: event.user.id,
+          source: event.deliverySource!,
+          externalRef: event.externalRef,
+        );
+        _orderId = order.id;
+      } else if (event.tableId != null) {
+        final order = await _orderRepository.openTableOrder(
+          sessionId: session.id,
+          waiterId: event.user.id,
+          tableId: event.tableId!,
+          guestCount: event.guestCount ?? 1,
+        );
+        _orderId = order.id;
+      } else {
+        final order = await _orderRepository.createOrder(
+          sessionId: session.id,
+          waiterId: event.user.id,
+          orderType: OrderType.dineIn,
+        );
+        _orderId = order.id;
+      }
+
       await _emitOrder(emit);
     } catch (e) {
       emit(CartError('Impossible d\'ouvrir la commande : $e'));
@@ -71,6 +100,12 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   ) async {
     final orderId = _orderId;
     if (orderId == null) {
+      return;
+    }
+
+    final current = state.orderOrNull;
+    if (current != null &&
+        OrderSource.fromDb(current.order.source) != OrderSource.manual) {
       return;
     }
 
@@ -163,8 +198,16 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
     emit(const CartLoading());
     try {
-      await _orderRepository.removeOrderItem(event.orderItemId);
-      await _emitOrder(emit);
+      final graceful =
+          await _orderRepository.removeOrderItem(event.orderItemId);
+      await _emitOrder(
+        emit,
+        feedbackMessage: graceful
+            ? 'Annulation discrète (grâce 30 s)'
+            : null,
+      );
+    } on OrderItemVoidRequired catch (e) {
+      emit(CartError(e.message));
     } catch (e) {
       await _recoverOrEmitError(emit, e, 'Suppression');
     }
@@ -182,14 +225,23 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
     try {
       if (event.quantity <= 0) {
-        await _orderRepository.removeOrderItem(event.orderItemId);
+        final graceful =
+            await _orderRepository.removeOrderItem(event.orderItemId);
+        await _emitOrder(
+          emit,
+          feedbackMessage: graceful
+              ? 'Annulation discrète (grâce 30 s)'
+              : null,
+        );
       } else {
         await _orderRepository.updateOrderItemQuantity(
           orderItemId: event.orderItemId,
           quantity: event.quantity,
         );
+        await _emitOrder(emit);
       }
-      await _emitOrder(emit);
+    } on OrderItemVoidRequired catch (e) {
+      emit(CartError(e.message));
     } catch (e) {
       await _recoverOrEmitError(emit, e, 'Quantité');
     }
@@ -327,7 +379,10 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     return null;
   }
 
-  Future<void> _emitOrder(Emitter<CartState> emit) async {
+  Future<void> _emitOrder(
+    Emitter<CartState> emit, {
+    String? feedbackMessage,
+  }) async {
     final orderId = _orderId;
     if (orderId == null) {
       emit(const CartError('Commande non initialisée'));
@@ -339,6 +394,6 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       emit(const CartError('Commande introuvable'));
       return;
     }
-    emit(CartReady(complete));
+    emit(CartReady(complete, feedbackMessage: feedbackMessage));
   }
 }

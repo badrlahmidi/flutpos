@@ -66,6 +66,8 @@ Tous les messages échangés via WebSocket doivent respecter cette structure str
 | `ADD_ITEMS` | Mobile → PC | Ajout de produits à une commande existante |
 | `VOID_ITEM` | Mobile → PC | Annulation d'un produit (nécessite raison + ID autorisation) |
 | `ACK` | PC → Mobile | Accusé de réception. Payload contient `status` (SUCCESS/ERROR) |
+| `ORDER_STATUS_CHANGED` | PC ↔ KDS/Mobile | Notifie qu'un plat est prêt en cuisine. Payload: `{"orderId": "...", "itemId": "...", "status": "SERVED"}` |
+| `STOCK_ALERT` | PC → Mobile | Notifie qu'un produit est en rupture. Payload: `{"productId": "...", "stock": 0}` |
 
 ---
 

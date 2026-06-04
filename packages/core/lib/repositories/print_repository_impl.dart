@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart';
+
 import '../database/app_database.dart';
 import 'print_repository.dart';
 
@@ -9,6 +11,22 @@ class PrintRepositoryImpl implements PrintRepository {
   @override
   Future<RestaurantConfigData?> getRestaurantConfig() {
     return _db.select(_db.restaurantConfig).getSingleOrNull();
+  }
+
+  @override
+  Future<void> updateDefaultServiceMode(String modeDbValue) async {
+    final config = await getRestaurantConfig();
+    if (config == null) {
+      return;
+    }
+    await (_db.update(_db.restaurantConfig)
+          ..where((c) => c.id.equals(config.id)))
+        .write(
+      RestaurantConfigCompanion(
+        defaultServiceMode: Value(modeDbValue),
+        updatedAt: Value(DateTime.now().toUtc()),
+      ),
+    );
   }
 
   @override

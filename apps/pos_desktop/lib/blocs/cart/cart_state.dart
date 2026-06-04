@@ -17,14 +17,20 @@ final class CartLoading extends CartState {
 }
 
 final class CartReady extends CartState {
-  const CartReady(this.order);
+  const CartReady(this.order, {this.feedbackMessage});
 
   final CompleteOrder order;
+  final String? feedbackMessage;
 
   int get itemCount => order.items.length;
 
   @override
-  List<Object?> get props => [order.order.id, order.items.length, order.subtotalAmount];
+  List<Object?> get props => [
+        order.order.id,
+        order.items.length,
+        order.subtotalAmount,
+        feedbackMessage,
+      ];
 }
 
 final class CartError extends CartState {
@@ -57,4 +63,23 @@ extension CartStateX on CartState {
   }
 
   bool get isProforma => orderOrNull?.order.status == 'PROFORMA';
+
+  bool get isDeliveryOrder =>
+      orderOrNull?.orderType == OrderType.delivery;
+
+  OrderSource get orderSourceOrDefault {
+    final raw = orderOrNull?.order.source;
+    if (raw == null) {
+      return OrderSource.manual;
+    }
+    return OrderSource.fromDb(raw);
+  }
+
+  String? get deliveryDisplayLabel {
+    final order = orderOrNull?.order;
+    if (order == null) {
+      return null;
+    }
+    return DeliveryTicketHeader.displayLabel(order);
+  }
 }

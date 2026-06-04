@@ -6,12 +6,15 @@ import '../entities/order_item_with_product.dart';
 import '../enums/audit_action.dart';
 import '../enums/audit_target_type.dart';
 import '../enums/discount_type.dart';
+import '../enums/order_source.dart';
 import '../enums/order_type.dart';
 import '../enums/payment_method.dart';
 import '../usecases/calculate_order_total.dart';
 import '../usecases/money_math.dart';
 import '../utils/payment_order_mapper.dart';
 import '../utils/moroccan_ice.dart';
+import '../exceptions/order_item_void_required.dart';
+import '../utils/order_item_grace.dart';
 import '../utils/order_pricing.dart';
 import '../utils/uuid_generator.dart';
 import 'audit_repository.dart';
@@ -68,9 +71,12 @@ class OrderRepositoryImpl implements OrderRepository {
     required OrderType orderType,
     String? tableId,
     int guestCount = 1,
+    OrderSource source = OrderSource.manual,
+    String? externalRef,
   }) async {
     final id = newUuid();
     final now = DateTime.now().toUtc();
+    final ref = _normalizeExternalRef(externalRef);
     await _db.into(_db.orders).insert(
           OrdersCompanion.insert(
             id: Value(id),
@@ -78,11 +84,57 @@ class OrderRepositoryImpl implements OrderRepository {
             waiterId: waiterId,
             tableId: Value(tableId),
             orderType: orderType.dbValue,
+            source: Value(source.dbValue),
+            externalRef: Value(ref),
             guestCount: Value(guestCount),
             createdAt: now,
           ),
         );
+    if (tableId != null) {
+      await _setTableStatus(tableId, 'OCCUPIED');
+    }
     return (_db.select(_db.orders)..where((o) => o.id.equals(id))).getSingle();
+  }
+
+  @override
+  Future<Order> createDeliveryOrder({
+    required String sessionId,
+    required String waiterId,
+    required OrderSource source,
+    String? externalRef,
+  }) {
+    if (source == OrderSource.manual) {
+      throw ArgumentError('Source livraison invalide');
+    }
+    return createOrder(
+      sessionId: sessionId,
+      waiterId: waiterId,
+      orderType: OrderType.delivery,
+      tableId: null,
+      source: source,
+      externalRef: externalRef,
+    );
+  }
+
+  @override
+  Future<List<Order>> listOpenDeliveryOrders(String sessionId) {
+    return (_db.select(_db.orders)
+          ..where(
+            (o) =>
+                o.sessionId.equals(sessionId) &
+                o.orderType.equals(OrderType.delivery.dbValue) &
+                o.status.isIn(_openOrderStatuses),
+          )
+          ..orderBy([(o) => OrderingTerm.desc(o.createdAt)]))
+        .get();
+  }
+
+  String? _normalizeExternalRef(String? ref) {
+    if (ref == null) {
+      return null;
+    }
+    final trimmed = ref.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   @override
@@ -277,12 +329,26 @@ class OrderRepositoryImpl implements OrderRepository {
   }
 
   @override
-  Future<void> removeOrderItem(String orderItemId) async {
+  Future<bool> removeOrderItem(String orderItemId) async {
+    final item = await (_db.select(_db.orderItems)
+          ..where((i) => i.id.equals(orderItemId)))
+        .getSingleOrNull();
+    if (item == null) {
+      return false;
+    }
+    if (item.isFired) {
+      throw const OrderItemVoidRequired();
+    }
+
+    final graceful = OrderItemGrace.isEligible(item);
+
     await (_db.delete(_db.orderItemModifiers)
           ..where((m) => m.orderItemId.equals(orderItemId)))
         .go();
     await (_db.delete(_db.orderItems)..where((i) => i.id.equals(orderItemId)))
         .go();
+
+    return graceful;
   }
 
   @override
@@ -395,6 +461,7 @@ class OrderRepositoryImpl implements OrderRepository {
         );
 
     await issueInvoiceNumberIfNeeded(orderId);
+    await _releaseTableIfNoOpenOrders(complete.order.tableId);
 
     return (_db.select(_db.orders)..where((o) => o.id.equals(orderId)))
         .getSingle();
@@ -471,6 +538,269 @@ class OrderRepositoryImpl implements OrderRepository {
         );
     return (_db.select(_db.orders)..where((o) => o.id.equals(orderId)))
         .getSingle();
+  }
+
+  static const _openOrderStatuses = ['OPEN', 'SENT', 'PROFORMA'];
+
+  @override
+  Future<Order?> getOpenOrderForTable(String tableId) {
+    return (_db.select(_db.orders)
+          ..where(
+            (o) =>
+                o.tableId.equals(tableId) &
+                o.status.isIn(_openOrderStatuses),
+          )
+          ..orderBy([(o) => OrderingTerm.desc(o.createdAt)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  @override
+  Future<Order> openTableOrder({
+    required String sessionId,
+    required String waiterId,
+    required String tableId,
+    int guestCount = 1,
+  }) async {
+    final existing = await getOpenOrderForTable(tableId);
+    if (existing != null) {
+      throw StateError('La table possède déjà un ticket ouvert');
+    }
+
+    final targetTable = await (_db.select(_db.restaurantTables)
+          ..where((t) => t.id.equals(tableId)))
+        .getSingleOrNull();
+    if (targetTable == null) {
+      throw StateError('Table introuvable');
+    }
+
+    final occupiedElsewhere = await (_db.select(_db.orders)
+          ..where(
+            (o) =>
+                o.tableId.equals(tableId) &
+                o.status.isIn(_openOrderStatuses),
+          ))
+        .get();
+    if (occupiedElsewhere.isNotEmpty) {
+      throw StateError('Table occupée');
+    }
+
+    return createOrder(
+      sessionId: sessionId,
+      waiterId: waiterId,
+      orderType: OrderType.dineIn,
+      tableId: tableId,
+      guestCount: guestCount,
+    );
+  }
+
+  @override
+  Future<Order> transferTableOrder({
+    required String orderId,
+    required String targetTableId,
+  }) async {
+    final order = await (_db.select(_db.orders)
+          ..where((o) => o.id.equals(orderId)))
+        .getSingleOrNull();
+    if (order == null) {
+      throw StateError('Commande introuvable');
+    }
+    if (!_openOrderStatuses.contains(order.status)) {
+      throw StateError('Seuls les tickets ouverts peuvent être transférés');
+    }
+
+    final fromTableId = order.tableId;
+    if (fromTableId == null) {
+      throw StateError('Commande sans table');
+    }
+    if (fromTableId == targetTableId) {
+      return order;
+    }
+
+    final targetOpen = await getOpenOrderForTable(targetTableId);
+    if (targetOpen != null) {
+      throw StateError('La table cible est déjà occupée');
+    }
+
+    await (_db.update(_db.orders)..where((o) => o.id.equals(orderId))).write(
+          OrdersCompanion(
+            tableId: Value(targetTableId),
+            updatedAt: Value(DateTime.now().toUtc()),
+          ),
+        );
+
+    await _releaseTableIfNoOpenOrders(fromTableId);
+    await _setTableStatus(targetTableId, 'OCCUPIED');
+
+    return (_db.select(_db.orders)..where((o) => o.id.equals(orderId)))
+        .getSingle();
+  }
+
+  @override
+  Future<Order> mergeTableOrders({
+    required String targetOrderId,
+    required String sourceOrderId,
+  }) async {
+    if (targetOrderId == sourceOrderId) {
+      throw ArgumentError('Impossible de fusionner un ticket avec lui-même');
+    }
+
+    final target = await (_db.select(_db.orders)
+          ..where((o) => o.id.equals(targetOrderId)))
+        .getSingleOrNull();
+    final source = await (_db.select(_db.orders)
+          ..where((o) => o.id.equals(sourceOrderId)))
+        .getSingleOrNull();
+
+    if (target == null || source == null) {
+      throw StateError('Commande introuvable');
+    }
+    if (!_openOrderStatuses.contains(target.status) ||
+        !_openOrderStatuses.contains(source.status)) {
+      throw StateError('Seuls les tickets ouverts peuvent être fusionnés');
+    }
+
+    await _assertOrderAcceptsNewItems(targetOrderId);
+
+    await (_db.update(_db.orderItems)
+          ..where((i) => i.orderId.equals(sourceOrderId)))
+        .write(OrderItemsCompanion(orderId: Value(targetOrderId)));
+
+    await (_db.update(_db.orders)..where((o) => o.id.equals(sourceOrderId)))
+        .write(
+      OrdersCompanion(
+        status: const Value('CANCELLED'),
+        updatedAt: Value(DateTime.now().toUtc()),
+      ),
+    );
+
+    await _releaseTableIfNoOpenOrders(source.tableId);
+    if (target.tableId != null) {
+      await _setTableStatus(target.tableId!, 'OCCUPIED');
+    }
+
+    return (_db.select(_db.orders)..where((o) => o.id.equals(targetOrderId)))
+        .getSingle();
+  }
+
+  @override
+  Future<({Order subOrder, OrderItem movedItem})> splitOrderItemToSubOrder({
+    required String sourceOrderId,
+    required String orderItemId,
+    String? targetSubOrderId,
+    double quantityToMove = 1,
+  }) async {
+    await _assertOrderAcceptsNewItems(sourceOrderId);
+
+    final sourceOrder = await (_db.select(_db.orders)
+          ..where((o) => o.id.equals(sourceOrderId)))
+        .getSingle();
+
+    final item = await (_db.select(_db.orderItems)
+          ..where((i) => i.id.equals(orderItemId)))
+        .getSingle();
+
+    if (item.orderId != sourceOrderId) {
+      throw StateError('Ligne hors du ticket source');
+    }
+    if (item.status == 'VOIDED') {
+      throw StateError('Ligne annulée');
+    }
+    if (quantityToMove <= 0 || quantityToMove > item.quantity) {
+      throw ArgumentError('Quantité invalide pour le split');
+    }
+
+    Order subOrder;
+    if (targetSubOrderId != null) {
+      subOrder = await (_db.select(_db.orders)
+            ..where((o) => o.id.equals(targetSubOrderId)))
+          .getSingle();
+      if (!_openOrderStatuses.contains(subOrder.status)) {
+        throw StateError('Sous-ticket non ouvert');
+      }
+    } else {
+      subOrder = await createOrder(
+        sessionId: sourceOrder.sessionId,
+        waiterId: sourceOrder.waiterId,
+        orderType: OrderType.fromDb(sourceOrder.orderType),
+        guestCount: 1,
+      );
+    }
+
+    OrderItem movedItem;
+    if (quantityToMove < item.quantity) {
+      await updateOrderItemQuantity(
+        orderItemId: orderItemId,
+        quantity: item.quantity - quantityToMove,
+      );
+      final newId = newUuid();
+      await _db.into(_db.orderItems).insert(
+            OrderItemsCompanion.insert(
+              id: Value(newId),
+              orderId: subOrder.id,
+              productId: item.productId,
+              quantity: quantityToMove,
+              unitPrice: item.unitPrice,
+              taxRate: item.taxRate,
+              customNotes: Value(item.customNotes),
+              createdAt: DateTime.now().toUtc(),
+            ),
+          );
+      final modifiers = await (_db.select(_db.orderItemModifiers)
+            ..where((m) => m.orderItemId.equals(orderItemId)))
+          .get();
+      for (final modifier in modifiers) {
+        await _db.into(_db.orderItemModifiers).insert(
+              OrderItemModifiersCompanion.insert(
+                id: Value(newUuid()),
+                orderItemId: newId,
+                modifierOptionId: modifier.modifierOptionId,
+                priceExtra: modifier.priceExtra,
+              ),
+            );
+      }
+      movedItem =
+          await (_db.select(_db.orderItems)..where((i) => i.id.equals(newId)))
+              .getSingle();
+    } else {
+      await (_db.update(_db.orderItems)
+            ..where((i) => i.id.equals(orderItemId)))
+          .write(OrderItemsCompanion(orderId: Value(subOrder.id)));
+      movedItem = await (_db.select(_db.orderItems)
+            ..where((i) => i.id.equals(orderItemId)))
+          .getSingle();
+    }
+
+    return (subOrder: subOrder, movedItem: movedItem);
+  }
+
+  @override
+  Future<List<Order>> getOpenSubOrdersForSession(String sessionId) {
+    return (_db.select(_db.orders)
+          ..where(
+            (o) =>
+                o.sessionId.equals(sessionId) &
+                o.tableId.isNull() &
+                o.status.isIn(_openOrderStatuses),
+          )
+          ..orderBy([(o) => OrderingTerm.asc(o.createdAt)]))
+        .get();
+  }
+
+  Future<void> _setTableStatus(String tableId, String status) async {
+    await (_db.update(_db.restaurantTables)
+          ..where((t) => t.id.equals(tableId)))
+        .write(RestaurantTablesCompanion(status: Value(status)));
+  }
+
+  Future<void> _releaseTableIfNoOpenOrders(String? tableId) async {
+    if (tableId == null) {
+      return;
+    }
+    final stillOpen = await getOpenOrderForTable(tableId);
+    if (stillOpen == null) {
+      await _setTableStatus(tableId, 'FREE');
+    }
   }
 
   Future<void> _assertOrderAcceptsNewItems(String orderId) async {

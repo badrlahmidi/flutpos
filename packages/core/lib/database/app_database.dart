@@ -56,7 +56,10 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase(super.executor);
+  AppDatabase(super.executor, {this.powerSyncManaged = false});
+
+  /// `true` quand la base est ouverte via PowerSync (schéma géré côté sync).
+  final bool powerSyncManaged;
 
   @override
   int get schemaVersion => 3;
@@ -64,7 +67,12 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (Migrator m) async {
-          await m.createAll();
+          if (powerSyncManaged) {
+            // PowerSync crée les vues ; Drift gère la table lien composite.
+            await m.createTable(productModifiers);
+          } else {
+            await m.createAll();
+          }
         },
         onUpgrade: (Migrator m, int from, int to) async {
           if (from < 3) {

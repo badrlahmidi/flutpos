@@ -4,6 +4,8 @@ import '../database/app_database.dart';
 abstract class PrintRepository {
   Future<RestaurantConfigData?> getRestaurantConfig();
 
+  Future<void> updateDefaultServiceMode(String modeDbValue);
+
   Future<List<PrintStation>> getActivePrintStations();
 
   Future<PrintStation?> getPrintStationById(String stationId);

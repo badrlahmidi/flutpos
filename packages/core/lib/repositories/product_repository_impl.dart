@@ -29,6 +29,25 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
+  Stream<List<Category>> watchActiveCategories() {
+    return (_db.select(_db.categories)
+          ..where((c) => c.isActive.equals(true))
+          ..orderBy([(c) => OrderingTerm.asc(c.sortOrder)]))
+        .watch();
+  }
+
+  @override
+  Stream<List<Product>> watchProductsByCategory(String categoryId) {
+    return (_db.select(_db.products)
+          ..where(
+            (p) =>
+                p.categoryId.equals(categoryId) & p.isActive.equals(true),
+          )
+          ..orderBy([(p) => OrderingTerm.asc(p.sortOrder)]))
+        .watch();
+  }
+
+  @override
   Future<Product?> getProductById(String productId) {
     return (_db.select(_db.products)..where((p) => p.id.equals(productId)))
         .getSingleOrNull();

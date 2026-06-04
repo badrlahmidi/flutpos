@@ -9,6 +9,8 @@ import 'widgets/cash_movement_dialog.dart';
 import 'widgets/open_session_dialog.dart';
 import 'widgets/session_report_panel.dart';
 import 'z_close_page.dart';
+import '../backoffice/analytics_dashboard_page.dart';
+import '../backoffice/accounting_export_page.dart';
 
 /// Hub trésorerie : ouverture, pay-in/out, X-Report.
 class SessionHubPage extends StatefulWidget {
@@ -159,6 +161,17 @@ class _SessionHubPageState extends State<SessionHubPage> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Dashboard analytique',
+            onPressed: () {
+              Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => const AnalyticsDashboardPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.insights_outlined),
+          ),
+          IconButton(
             tooltip: 'Actualiser',
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh),
@@ -174,6 +187,34 @@ class _SessionHubPageState extends State<SessionHubPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      PosButton(
+                        label: 'EXPORT COMPTABLE CSV',
+                        icon: Icons.file_download_outlined,
+                        variant: PosButtonVariant.outlined,
+                        expand: true,
+                        onPressed: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const AccountingExportPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.s),
+                      PosButton(
+                        label: 'DASHBOARD ANALYTIQUE',
+                        icon: Icons.insights_outlined,
+                        variant: PosButtonVariant.tonal,
+                        expand: true,
+                        onPressed: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const AnalyticsDashboardPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.m),
                       if (_session == null) ...[
                         Text(
                           'Aucune session ouverte',

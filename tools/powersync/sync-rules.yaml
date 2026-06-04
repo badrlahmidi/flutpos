@@ -1,0 +1,41 @@
+# PowerSync sync rules — Ritagestion (Sprint 5)
+# Déployer sur l'instance PowerSync Cloud connectée à Supabase/PostgreSQL.
+#
+# Prérequis Postgres : tables miroir du schéma Drift (snake_case, UUID PK).
+# Filtrage multi-tenant via `restaurant_id` sur chaque table (à ajouter côté cloud).
+
+bucket_definitions:
+  global_catalog:
+    parameters:
+      - SELECT request.user_id() AS user_id
+    data:
+      - SELECT * FROM restaurant_config WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM users WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM zones WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM restaurant_tables WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM print_stations WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM categories WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM products WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM modifier_groups WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM modifier_options WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM product_modifiers WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM ingredients WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM recipe_items WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM discounts WHERE restaurant_id = bucket.restaurant_id
+
+  operational:
+    parameters:
+      - SELECT request.user_id() AS user_id
+    data:
+      - SELECT * FROM cash_sessions WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM cash_movements WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM orders WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM order_items WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM order_item_modifiers WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM payments WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM reservations WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM time_attendance WHERE restaurant_id = bucket.restaurant_id
+      - SELECT * FROM audit_trail WHERE restaurant_id = bucket.restaurant_id
+
+# Tables NON synchronisées (local-only côté client) :
+# - sync_queue : file d'attente WebSocket LAN (package network)

@@ -186,6 +186,7 @@ Future<void> _seedAll(AppDatabase db, DateTime now) async {
 
   await _seedModifierGroups(db);
   await _seedProducts(db);
+  await _seedIngredientsAndRecipes(db, now);
 }
 
 Future<void> _seedModifierGroups(AppDatabase db) async {
@@ -418,6 +419,50 @@ Future<void> _seedProducts(AppDatabase db) async {
       ProductModifiersCompanion.insert(
         productId: SeedIds.productBurger,
         modifierGroupId: SeedIds.modSauces,
+      ),
+    ]);
+  });
+}
+
+Future<void> _seedIngredientsAndRecipes(AppDatabase db, DateTime now) async {
+  const ingBeef = '00000000-0000-4000-8000-000000000070';
+  const ingBun = '00000000-0000-4000-8000-000000000071';
+
+  await db.batch((batch) {
+    batch.insertAll(db.ingredients, [
+      IngredientsCompanion.insert(
+        id: const Value(ingBeef),
+        name: 'Bœuf',
+        unit: 'kg',
+        costPerUnit: 90,
+        updatedAt: now,
+      ),
+      IngredientsCompanion.insert(
+        id: const Value(ingBun),
+        name: 'Pain burger',
+        unit: 'pièce',
+        costPerUnit: 3,
+        updatedAt: now,
+      ),
+    ]);
+  });
+
+  await db.batch((batch) {
+    batch.insertAll(db.recipeItems, [
+      RecipeItemsCompanion.insert(
+        productId: SeedIds.productSteak,
+        ingredientId: ingBeef,
+        quantityUsed: 0.25,
+      ),
+      RecipeItemsCompanion.insert(
+        productId: SeedIds.productBurger,
+        ingredientId: ingBeef,
+        quantityUsed: 0.15,
+      ),
+      RecipeItemsCompanion.insert(
+        productId: SeedIds.productBurger,
+        ingredientId: ingBun,
+        quantityUsed: 1,
       ),
     ]);
   });

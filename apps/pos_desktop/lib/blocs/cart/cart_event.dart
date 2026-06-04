@@ -8,14 +8,33 @@ sealed class CartEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Ouvre la session caisse et crée une commande [OPEN].
+/// Ouvre la session caisse et crée ou reprend une commande [OPEN].
 final class CartStarted extends CartEvent {
-  const CartStarted(this.user);
+  const CartStarted(
+    this.user, {
+    this.existingOrderId,
+    this.tableId,
+    this.guestCount,
+    this.deliverySource,
+    this.externalRef,
+  });
 
   final User user;
+  final String? existingOrderId;
+  final String? tableId;
+  final int? guestCount;
+  final OrderSource? deliverySource;
+  final String? externalRef;
 
   @override
-  List<Object?> get props => [user.id];
+  List<Object?> get props => [
+        user.id,
+        existingOrderId,
+        tableId,
+        guestCount,
+        deliverySource,
+        externalRef,
+      ];
 }
 
 final class CartOrderTypeChanged extends CartEvent {

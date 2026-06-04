@@ -114,6 +114,8 @@ class PosPrintService {
 
         lines: entry.value,
 
+        groupIdenticalLines: PrintStationTags.isBar(station),
+
       );
 
       final host = station.ipAddress;

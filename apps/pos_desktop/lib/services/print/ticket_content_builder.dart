@@ -30,6 +30,8 @@ abstract final class TicketContentBuilder {
 
     required List<OrderItemWithProduct> lines,
 
+    bool groupIdenticalLines = false,
+
   }) {
 
     if (lines.isEmpty) {
@@ -42,6 +44,8 @@ abstract final class TicketContentBuilder {
 
     final restaurant = config?.name ?? 'Ritagestion';
 
+    final deliveryBanner = DeliveryTicketHeader.kitchenBannerLine(order.order);
+
     final buffer = <String>[
 
       '*** ${station.name.toUpperCase()} ***',
@@ -50,11 +54,15 @@ abstract final class TicketContentBuilder {
 
       _dateTime.format(DateTime.now()),
 
+      if (deliveryBanner != null) deliveryBanner,
+
       'Commande ${order.order.id.substring(0, 8)}',
 
       'Type: ${_orderTypeLabel(order.orderType)}',
 
       'Serveur: ${order.waiter.name}',
+
+      if (groupIdenticalLines) 'Mode: synthese bar',
 
       '--------------------------------',
 
@@ -62,23 +70,49 @@ abstract final class TicketContentBuilder {
 
 
 
-    for (final line in lines) {
+    if (groupIdenticalLines) {
 
-      final qty = _formatQty(line.orderItem.quantity);
+      for (final grouped in KitchenTicketLineGrouper.group(lines)) {
 
-      buffer.add('$qty x ${line.product.name}');
+        final qty = _formatQty(grouped.quantity);
 
-      if (line.modifierSummary.isNotEmpty) {
+        buffer.add('$qty x ${grouped.productName}');
 
-        buffer.add('   > ${line.modifierSummary}');
+        if (grouped.modifierSummary.isNotEmpty) {
+
+          buffer.add('   > ${grouped.modifierSummary}');
+
+        }
+
+        if (grouped.customNotes != null && grouped.customNotes!.isNotEmpty) {
+
+          buffer.add('   Note: ${grouped.customNotes}');
+
+        }
 
       }
 
-      if (line.orderItem.customNotes != null &&
+    } else {
 
-          line.orderItem.customNotes!.isNotEmpty) {
+      for (final line in lines) {
 
-        buffer.add('   Note: ${line.orderItem.customNotes}');
+        final qty = _formatQty(line.orderItem.quantity);
+
+        buffer.add('$qty x ${line.product.name}');
+
+        if (line.modifierSummary.isNotEmpty) {
+
+          buffer.add('   > ${line.modifierSummary}');
+
+        }
+
+        if (line.orderItem.customNotes != null &&
+
+            line.orderItem.customNotes!.isNotEmpty) {
+
+          buffer.add('   Note: ${line.orderItem.customNotes}');
+
+        }
 
       }
 
@@ -118,6 +152,8 @@ abstract final class TicketContentBuilder {
 
     final restaurant = config?.name ?? 'Ritagestion';
 
+    final deliveryBanner = DeliveryTicketHeader.kitchenBannerLine(order.order);
+
     final buffer = <String>[
 
       '*** ANNULATION ***',
@@ -127,6 +163,8 @@ abstract final class TicketContentBuilder {
       restaurant,
 
       _dateTime.format(DateTime.now()),
+
+      if (deliveryBanner != null) deliveryBanner,
 
       'Commande ${order.order.id.substring(0, 8)}',
 

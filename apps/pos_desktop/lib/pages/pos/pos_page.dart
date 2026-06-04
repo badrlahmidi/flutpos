@@ -8,57 +8,87 @@ import 'package:window_manager/window_manager.dart';
 import '../../blocs/cart/cart_bloc.dart';
 import '../../blocs/cart/cart_event.dart';
 import '../../blocs/cart/cart_state.dart';
+import '../../blocs/catalog/catalog_bloc.dart';
+import '../../blocs/catalog/catalog_event.dart';
+import '../../blocs/catalog/catalog_state.dart';
 import '../../di/app_bootstrap.dart';
 import '../../di/service_locator.dart';
 import '../../platform/desktop_window.dart';
 import '../payment/payment_page.dart';
 import '../../services/print/pos_print_service.dart';
+import '../../services/pos_service_mode.dart';
 import '../../theme/app_spacing.dart';
+import '../../widgets/molecules/service_mode_toggle.dart';
 import '../../utils/discount_flow.dart';
 import '../../utils/manager_auth.dart';
 import '../../widgets/dialogs/void_item_dialog.dart';
 import '../../widgets/widgets.dart';
 import '../auth/auth_page.dart';
+import '../floor_plan/floor_plan_page.dart';
+import '../kds/kds_page.dart';
 import '../session/session_hub_page.dart';
+import '../backoffice/analytics_dashboard_page.dart';
+import 'delivery/delivery_orders_panel.dart';
+import 'delivery/delivery_start_dialog.dart';
 import 'modifiers/modifier_selection_dialog.dart';
+
+enum _PosWorkspace { register, deliveries }
 
 /// Écran caisse principal — 3 colonnes (20 % / 50 % / 30 %).
 class PosPage extends StatelessWidget {
-  const PosPage({super.key, required this.user});
+  const PosPage({
+    super.key,
+    required this.user,
+    this.orderId,
+    this.tableLabel,
+  });
 
   final User user;
+  final String? orderId;
+  final String? tableLabel;
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => CartBloc(
-        orderRepository: sl<OrderRepository>(),
-        cashSessionRepository: sl<CashSessionRepository>(),
-      )..add(CartStarted(user)),
-      child: _PosView(user: user),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => CartBloc(
+            orderRepository: sl<OrderRepository>(),
+            cashSessionRepository: sl<CashSessionRepository>(),
+          )..add(
+              CartStarted(
+                user,
+                existingOrderId: orderId,
+              ),
+            ),
+        ),
+        BlocProvider(
+          create: (_) => CatalogBloc(
+            productRepository: sl<ProductRepository>(),
+          )..add(const CatalogStarted()),
+        ),
+      ],
+      child: _PosView(user: user, tableLabel: tableLabel),
     );
   }
 }
 
 class _PosView extends StatefulWidget {
-  const _PosView({required this.user});
+  const _PosView({required this.user, this.tableLabel});
 
   final User user;
+  final String? tableLabel;
 
   @override
   State<_PosView> createState() => _PosViewState();
 }
 
 class _PosViewState extends State<_PosView> with WindowListener {
-  final _productRepository = sl<ProductRepository>();
   final _orderRepository = sl<OrderRepository>();
+  final _productRepository = sl<ProductRepository>();
 
-  List<Category> _categories = [];
-  List<Product> _products = [];
-  String? _selectedCategoryId;
-  bool _loadingCatalog = true;
-  String? _catalogError;
   final Set<String> _printedKitchenItemIds = {};
+  _PosWorkspace _workspace = _PosWorkspace.register;
 
   @override
   void initState() {
@@ -66,7 +96,6 @@ class _PosViewState extends State<_PosView> with WindowListener {
     if (DesktopWindow.isKioskTarget) {
       windowManager.addListener(this);
     }
-    _loadCatalog();
   }
 
   @override
@@ -80,78 +109,8 @@ class _PosViewState extends State<_PosView> with WindowListener {
   @override
   void onWindowClose() {}
 
-  Future<void> _loadCatalog() async {
-    setState(() {
-      _loadingCatalog = true;
-      _catalogError = null;
-    });
-
-    try {
-      final categories = await _productRepository.getActiveCategories();
-      if (!mounted) {
-        return;
-      }
-
-      if (categories.isEmpty) {
-        setState(() {
-          _categories = [];
-          _products = [];
-          _selectedCategoryId = null;
-          _loadingCatalog = false;
-        });
-        return;
-      }
-
-      final selected = _selectedCategoryId ?? categories.first.id;
-      final products =
-          await _productRepository.getProductsByCategory(selected);
-
-      setState(() {
-        _categories = categories;
-        _selectedCategoryId = selected;
-        _products = products;
-        _loadingCatalog = false;
-      });
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _catalogError = e.toString();
-        _loadingCatalog = false;
-      });
-    }
-  }
-
-  Future<void> _onCategorySelected(Category category) async {
-    if (category.id == _selectedCategoryId) {
-      return;
-    }
-
-    setState(() {
-      _selectedCategoryId = category.id;
-      _loadingCatalog = true;
-    });
-
-    try {
-      final products =
-          await _productRepository.getProductsByCategory(category.id);
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _products = products;
-        _loadingCatalog = false;
-      });
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _catalogError = e.toString();
-        _loadingCatalog = false;
-      });
-    }
+  void _onCategorySelected(Category category) {
+    context.read<CatalogBloc>().add(CatalogCategorySelected(category.id));
   }
 
   Future<void> _onProductTap(Product product) async {
@@ -200,6 +159,77 @@ class _PosViewState extends State<_PosView> with WindowListener {
     }
 
     context.read<CartBloc>().add(CartItemAdded(product));
+  }
+
+  Future<bool> _confirmLeaveCurrentCart() async {
+    final order = context.read<CartBloc>().state.orderOrNull;
+    if (order == null || order.activeItems.isEmpty) {
+      return true;
+    }
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Changer de ticket ?'),
+        content: const Text(
+          'Le panier actuel contient des articles. '
+          'Ouvrez un autre ticket seulement après encaissement ou vidage.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Continuer'),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  Future<void> _startDeliveryOrder(
+    OrderSource source,
+    String? externalRef,
+  ) async {
+    if (!await _confirmLeaveCurrentCart() || !mounted) {
+      return;
+    }
+
+    context.read<CartBloc>().add(
+          CartStarted(
+            widget.user,
+            deliverySource: source,
+            externalRef: externalRef,
+          ),
+        );
+    setState(() => _workspace = _PosWorkspace.deliveries);
+  }
+
+  Future<void> _openDeliveryOrder(String orderId) async {
+    if (!await _confirmLeaveCurrentCart() || !mounted) {
+      return;
+    }
+
+    context.read<CartBloc>().add(
+          CartStarted(
+            widget.user,
+            existingOrderId: orderId,
+          ),
+        );
+    setState(() => _workspace = _PosWorkspace.deliveries);
+  }
+
+  void _onServiceModeChanged(ServiceMode mode) {
+    if (mode == ServiceMode.tableService && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => FloorPlanPage(user: widget.user),
+        ),
+      );
+    }
   }
 
   void _lockRegister() {
@@ -317,6 +347,14 @@ class _PosViewState extends State<_PosView> with WindowListener {
     }
   }
 
+  void _openDashboard() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const AnalyticsDashboardPage(),
+      ),
+    );
+  }
+
   Future<void> _onPay(CompleteOrder order) async {
     final paid = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
@@ -332,6 +370,7 @@ class _PosViewState extends State<_PosView> with WindowListener {
     }
 
     context.read<CartBloc>().add(const CartReloadRequested());
+    setState(() => _workspace = _PosWorkspace.register);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -457,6 +496,22 @@ class _PosViewState extends State<_PosView> with WindowListener {
         }
       },
       child: BlocListener<CartBloc, CartState>(
+        listenWhen: (prev, curr) =>
+            curr is CartReady &&
+            curr.feedbackMessage != null &&
+            (prev is! CartReady ||
+                prev.feedbackMessage != curr.feedbackMessage),
+        listener: (context, state) {
+          if (state is CartReady && state.feedbackMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.feedbackMessage!),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        },
+        child: BlocListener<CartBloc, CartState>(
         listener: _onCartStateChanged,
         child: Scaffold(
         body: Column(
@@ -465,29 +520,74 @@ class _PosViewState extends State<_PosView> with WindowListener {
             _PosTopBar(
               restaurantName: 'Ritagestion',
               cashierName: widget.user.name,
+              tableLabel: widget.tableLabel,
+              workspace: _workspace,
               lanOnline: server.isRunning,
               clientCount: server.clientRegistry.count,
+              onWorkspaceChanged: (w) => setState(() => _workspace = w),
+              onNewDelivery: () async {
+                final data = await showDeliveryStartDialog(context);
+                if (data != null && mounted) {
+                  await _startDeliveryOrder(data.source, data.externalRef);
+                }
+              },
+              onFloorPlan: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => FloorPlanPage(user: widget.user),
+                  ),
+                );
+              },
               onTreasury: _openTreasury,
+              onDashboard: _openDashboard,
+              onServiceModeChanged: _onServiceModeChanged,
+              onKds: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(builder: (_) => const KdsPage()),
+                );
+              },
             ),
             Expanded(
-              child: _catalogError != null
-                  ? _CatalogError(
-                      message: _catalogError!,
-                      onRetry: _loadCatalog,
-                    )
-                  : Row(
+              child: BlocBuilder<CatalogBloc, CatalogState>(
+                builder: (context, catalogState) {
+                  if (catalogState is CatalogError) {
+                    return _CatalogError(
+                      message: catalogState.message,
+                      onRetry: () => context
+                          .read<CatalogBloc>()
+                          .add(const CatalogStarted()),
+                    );
+                  }
+
+                  if (catalogState is! CatalogReady) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final catalog = catalogState;
+                  return BlocBuilder<CartBloc, CartState>(
+                    builder: (context, cartState) {
+                      final currentOrder = cartState.orderOrNull;
+                      return Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(
                           flex: 2,
-                          child: ColoredBox(
-                            color: scheme.surface,
-                            child: CategoryBar(
-                              categories: _categories,
-                              selectedCategoryId: _selectedCategoryId,
-                              onCategorySelected: _onCategorySelected,
-                            ),
-                          ),
+                          child: _workspace == _PosWorkspace.deliveries
+                              ? DeliveryOrdersPanel(
+                                  cashierId: widget.user.id,
+                                  selectedOrderId: currentOrder?.order.id,
+                                  onOrderSelected: _openDeliveryOrder,
+                                  onNewDelivery: _startDeliveryOrder,
+                                )
+                              : ColoredBox(
+                                  color: scheme.surface,
+                                  child: CategoryBar(
+                                    categories: catalog.categories,
+                                    selectedCategoryId:
+                                        catalog.selectedCategoryId,
+                                    onCategorySelected: _onCategorySelected,
+                                  ),
+                                ),
                         ),
                         VerticalDivider(
                           width: 1,
@@ -502,19 +602,20 @@ class _PosViewState extends State<_PosView> with WindowListener {
                                   prev.orderTypeOrDefault !=
                                   curr.orderTypeOrDefault,
                               builder: (context, cartState) {
-                                return _loadingCatalog
-                                    ? const Center(
-                                        child: CircularProgressIndicator(),
-                                      )
-                                    : ProductsGrid(
-                                        products: _products,
-                                        priceFor: (p) => _orderRepository
-                                            .resolveUnitPrice(
-                                          p,
-                                          cartState.orderTypeOrDefault,
-                                        ),
-                                        onProductTap: _onProductTap,
-                                      );
+                                if (catalog.isLoadingProducts) {
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
+                                return ProductsGrid(
+                                  products: catalog.products,
+                                  priceFor: (p) => _orderRepository
+                                      .resolveUnitPrice(
+                                    p,
+                                    cartState.orderTypeOrDefault,
+                                  ),
+                                  onProductTap: _onProductTap,
+                                );
                               },
                             ),
                           ),
@@ -525,26 +626,24 @@ class _PosViewState extends State<_PosView> with WindowListener {
                         ),
                         Expanded(
                           flex: 3,
-                          child: BlocBuilder<CartBloc, CartState>(
-                            builder: (context, cartState) {
-                              final order = cartState.orderOrNull;
-                              final isLoading = cartState is CartLoading;
-
-                              return CartPanel(
+                          child: CartPanel(
                                 user: widget.user,
                                 isOrderLocked: cartState.isOrderLocked,
                                 isProforma: cartState.isProforma,
+                                isDeliveryOrder: cartState.isDeliveryOrder,
+                                deliveryLabel: cartState.deliveryDisplayLabel,
                                 orderType: cartState.orderTypeOrDefault,
                                 onOrderTypeChanged: (type) => context
                                     .read<CartBloc>()
                                     .add(CartOrderTypeChanged(type)),
                                 onLock: _lockRegister,
-                                items: order?.activeItems ?? [],
-                                subtotal: order?.displaySubtotal ?? 0,
-                                taxAmount: order?.displayTaxAmount ?? 0,
-                                discountAmount: order?.displayDiscountAmount ?? 0,
-                                total: order?.displayGrandTotal ?? 0,
-                                isLoading: isLoading,
+                                items: currentOrder?.activeItems ?? [],
+                                subtotal: currentOrder?.displaySubtotal ?? 0,
+                                taxAmount: currentOrder?.displayTaxAmount ?? 0,
+                                discountAmount:
+                                    currentOrder?.displayDiscountAmount ?? 0,
+                                total: currentOrder?.displayGrandTotal ?? 0,
+                                isLoading: cartState is CartLoading,
                                 onIncrement: (line) => context
                                     .read<CartBloc>()
                                     .add(
@@ -561,30 +660,34 @@ class _PosViewState extends State<_PosView> with WindowListener {
                                         quantity: line.orderItem.quantity - 1,
                                       ),
                                     ),
-                                onRemove: order == null
+                                onRemove: currentOrder == null
                                     ? null
-                                    : (line) => _onRemoveLine(line, order),
-                                onDiscount: order == null
+                                    : (line) =>
+                                        _onRemoveLine(line, currentOrder),
+                                onDiscount: currentOrder == null
                                     ? null
-                                    : () => _onDiscount(order),
-                                onSendToKitchen: order == null
+                                    : () => _onDiscount(currentOrder),
+                                onSendToKitchen: currentOrder == null
                                     ? null
-                                    : () => _onSendToKitchen(order),
-                                onProforma: order == null
+                                    : () => _onSendToKitchen(currentOrder),
+                                onProforma: currentOrder == null
                                     ? null
-                                    : () => _onProforma(order),
-                                onPay: order == null
+                                    : () => _onProforma(currentOrder),
+                                onPay: currentOrder == null
                                     ? null
-                                    : () => _onPay(order),
-                              );
-                            },
-                          ),
+                                    : () => _onPay(currentOrder),
+                              ),
                         ),
                       ],
-                    ),
+                    );
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),
+      ),
       ),
       ),
     );
@@ -595,16 +698,32 @@ class _PosTopBar extends StatelessWidget {
   const _PosTopBar({
     required this.restaurantName,
     required this.cashierName,
+    this.tableLabel,
+    required this.workspace,
     required this.lanOnline,
     required this.clientCount,
+    required this.onWorkspaceChanged,
+    required this.onNewDelivery,
+    required this.onFloorPlan,
     required this.onTreasury,
+    required this.onDashboard,
+    required this.onServiceModeChanged,
+    required this.onKds,
   });
 
   final String restaurantName;
   final String cashierName;
+  final String? tableLabel;
+  final _PosWorkspace workspace;
   final bool lanOnline;
   final int clientCount;
+  final ValueChanged<_PosWorkspace> onWorkspaceChanged;
+  final VoidCallback onNewDelivery;
+  final VoidCallback onFloorPlan;
   final VoidCallback onTreasury;
+  final VoidCallback onDashboard;
+  final ValueChanged<ServiceMode> onServiceModeChanged;
+  final VoidCallback onKds;
 
   @override
   Widget build(BuildContext context) {
@@ -630,7 +749,61 @@ class _PosTopBar extends StatelessWidget {
                 style: theme.textTheme.labelLarge,
                 overflow: TextOverflow.ellipsis,
               ),
+              if (tableLabel != null) ...[
+                const SizedBox(width: AppSpacing.m),
+                Chip(
+                  label: Text('Table $tableLabel'),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
               const Spacer(),
+              ServiceModeToggle(onModeChanged: onServiceModeChanged),
+              const SizedBox(width: AppSpacing.s),
+              SizedBox(
+                height: AppSpacing.minTouchTarget,
+                child: SegmentedButton<_PosWorkspace>(
+                  segments: const [
+                    ButtonSegment(
+                      value: _PosWorkspace.register,
+                      label: Text('Caisse'),
+                      icon: Icon(Icons.point_of_sale),
+                    ),
+                    ButtonSegment(
+                      value: _PosWorkspace.deliveries,
+                      label: Text('Livraisons'),
+                      icon: Icon(Icons.delivery_dining),
+                    ),
+                  ],
+                  selected: {workspace},
+                  onSelectionChanged: (set) {
+                    if (set.isNotEmpty) {
+                      onWorkspaceChanged(set.first);
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s),
+              IconButton(
+                tooltip: 'Écran cuisine (KDS)',
+                onPressed: onKds,
+                icon: const Icon(Icons.soup_kitchen_outlined),
+              ),
+              IconButton(
+                tooltip: 'Nouvelle livraison',
+                onPressed: onNewDelivery,
+                icon: const Icon(Icons.add_box_outlined),
+              ),
+              if (PosServiceMode.instance.isTableService)
+                IconButton(
+                  tooltip: 'Plan de salle',
+                  onPressed: onFloorPlan,
+                  icon: const Icon(Icons.table_restaurant_outlined),
+                ),
+              IconButton(
+                tooltip: 'Dashboard analytique',
+                onPressed: onDashboard,
+                icon: const Icon(Icons.insights_outlined),
+              ),
               IconButton(
                 tooltip: 'Trésorerie (X / Z / Pay-in-out)',
                 onPressed: onTreasury,

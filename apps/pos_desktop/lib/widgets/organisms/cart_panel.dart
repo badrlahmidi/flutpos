@@ -30,6 +30,8 @@ class CartPanel extends StatelessWidget {
     this.isOrderLocked = false,
     this.isProforma = false,
     this.discountAmount = 0,
+    this.deliveryLabel,
+    this.isDeliveryOrder = false,
   });
 
   final User user;
@@ -51,6 +53,8 @@ class CartPanel extends StatelessWidget {
   final bool isOrderLocked;
   final bool isProforma;
   final double discountAmount;
+  final String? deliveryLabel;
+  final bool isDeliveryOrder;
 
   int get itemCount => items.length;
 
@@ -68,13 +72,42 @@ class CartPanel extends StatelessWidget {
             userName: user.name,
             onLock: onLock,
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
-            child: _OrderTypeSelector(
-              orderType: orderType,
-              onChanged: onOrderTypeChanged,
+          if (deliveryLabel != null) ...[
+            const SizedBox(height: AppSpacing.s),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+              child: Material(
+                color: scheme.tertiaryContainer,
+                borderRadius: BorderRadius.circular(AppSpacing.s),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.m,
+                      vertical: AppSpacing.s,
+                    ),
+                    child: Text(
+                      deliveryLabel!,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: scheme.onTertiaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
+          if (!isDeliveryOrder) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+              child: _OrderTypeSelector(
+                orderType: orderType,
+                onChanged: onOrderTypeChanged,
+              ),
+            ),
+          ],
           if (isProforma) ...[
             const SizedBox(height: AppSpacing.s),
             Padding(

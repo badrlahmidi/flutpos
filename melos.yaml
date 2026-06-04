@@ -28,3 +28,7 @@ scripts:
   build:drift:
     run: cd packages/core && dart run build_runner build --delete-conflicting-outputs
     description: Génération du code Drift (.g.dart)
+
+  simulate:catalog-price:
+    run: cd tools && dart pub get && dart run cloud/simulate_catalog_price_update.dart
+    description: Simule une mise à jour de prix catalogue (silent update)

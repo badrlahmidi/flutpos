@@ -22,10 +22,12 @@ dependencies:
   google_fonts: ^6.2.1
   path: ^1.9.0
   path_provider: ^2.1.5
-  sqlite3_flutter_libs: ^0.5.42
+  sqlite3_flutter_libs: ^0.6.0+eol
   window_manager: ^0.4.3
   get_it: ^8.0.3
   unified_esc_pos_printer: ^3.2.0
+  powersync_flutter_libs: ^0.5.0
+  fl_chart: ^0.70.2
 
 dev_dependencies:
   flutter_test:
