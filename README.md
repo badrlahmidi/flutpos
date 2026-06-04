@@ -2,6 +2,8 @@
 
 Solution de caisse **offline-first** pour la restauration au Maroc (Flutter monorepo Melos).
 
+**Dépôt :** [github.com/badrlahmidi/flutpos](https://github.com/badrlahmidi/flutpos)
+
 ## Structure
 
 | Package / App | Rôle |
