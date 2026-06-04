@@ -112,53 +112,57 @@ Fondations   Caisse MVP   Réseau LAN   Trésorerie   Salle avancé  Cloud & Saa
 
 ---
 
-## Sprint 4 — Gestion de Salle Avancée (Semaines 8-9)
+## Sprint 4 — Gestion de Salle Avancée (Semaines 8-9) ✅*
+
+> Détail : [`SPRINT_STATUS.md`](SPRINT_STATUS.md) · Audit : [`FINAL_AUDIT.md`](FINAL_AUDIT.md) · Prompt : [`SPRINT4_ADVANCED_FLOOR_PROMPT.md`](SPRINT4_ADVANCED_FLOOR_PROMPT.md)
 
 ### Objectifs
-- [ ] **Plan de salle visuel** : Grille par zone avec tables colorées selon statut
-- [ ] **Transfert de table** : Déplacer une commande de Table A → Table B
-- [ ] **Fusion de tables** : Combiner 2 tickets ouverts
-- [ ] **Split Bill par montant** : Division égale entre N personnes
-- [ ] **Split Bill par article** : Drag-and-drop sur PC
-- [ ] **Écran Cuisine (KDS)** : Tablette WebSocket, bouton "Prêt" → notif serveur
-- [ ] **Regroupement tickets bar** : "4x Café" au lieu de 4 tickets
-- [ ] **Réservations** : Module basique avec blocage de table
-- [ ] **Gestion couverts** : Ajustement pour statistiques panier moyen
-- [ ] **Annulation avec grâce** : <30s et non imprimé → invisible. Sinon → ticket ANNULATION
-- [ ] **Bascule Service Rapide / Table** en un clic
-- [ ] **Commandes Glovo/Deliveroo** : Intégration basique (saisie manuelle avec source + externalRef)
+- [x] **Plan de salle visuel** : Grille par zone avec tables colorées selon statut
+- [x] **Transfert de table** : Déplacer une commande de Table A → Table B
+- [x] **Fusion de tables** : Combiner 2 tickets ouverts
+- [ ] **Split Bill par montant** : Division égale entre N personnes (use case OK, UI dédiée manquante)
+- [x] **Split Bill par article** : Drag-and-drop sur PC
+- [x] **Écran Cuisine (KDS)** : WebSocket, bouton "Prêt" → `ORDER_STATUS_CHANGED`
+- [x] **Regroupement tickets bar** : "4x Café" au lieu de 4 tickets
+- [x] **Réservations** : Module basique avec blocage de table (−30 min)
+- [x] **Gestion couverts** : `guestCount` à l'ouverture de table
+- [x] **Annulation avec grâce** : <30s et non fired → invisible. Sinon → void + audit
+- [x] **Bascule Service Rapide / Table** en un clic
+- [x] **Commandes Glovo/Deliveroo** : Saisie manuelle `source` + `externalRef`
 
 ### Livrables
-- Gestion salle complète avec tous les scénarios de la Phase 2
-- KDS fonctionnel sur tablette Android
-- Split bill testé en conditions réelles
+- [x] Gestion salle Phase 2 (~88 %)
+- [x] KDS fonctionnel (route desktop / tablette LAN)
+- [x] Split bill par article testé (repository + UI)
+- [ ] Courses Réclamé/Suite — reporté post-MVP
 
 ---
 
-## Sprint 5 — Cloud, Multi-tenant & Analytics (Semaines 10-12)
+## Sprint 5 — Cloud, Multi-tenant & Analytics (Semaines 10-12) ✅*
+
+> Détail : [`SPRINT_STATUS.md`](SPRINT_STATUS.md) · Audit : [`FINAL_AUDIT.md`](FINAL_AUDIT.md) · Prompt : [`SPRINT5_CLOUD_SAAS_PROMPT.md`](SPRINT5_CLOUD_SAAS_PROMPT.md)
 
 ### Objectifs
-- [ ] **PowerSync + Supabase :** Synchronisation bidirectionnelle
-- [ ] **Recovery disaster :** Nouveau PC → restauration complète en 1 minute
-- [ ] **Silent Update :** Modification prix depuis le cloud → push sur la caisse
-- [ ] **Dashboard analytique :**
-  - CA par jour/semaine/mois
-  - Produits les plus vendus
-  - Heures de pointe
-  - Performances par serveur (upsell)
-  - Food cost réel vs théorique
-- [ ] **Export comptable :** CSV/Excel avec séparation CA sur place/livraison/TVA
-- [ ] **Multi-tenant :** Isolation par restaurant, dashboard consolidé
-- [ ] **Pointage employés :** Clock-in/out avec calcul heures travaillées
-- [ ] **Pertes/Démarque :** Scan produit → choisir "Périmé" → mise à jour stock
-- [ ] **Menus programmés :** Catégories avec créneaux horaires (Ftour Ramadan)
-- [ ] **Food Cost automatique :** Vente → déduction ingrédients via RecipeItems
+- [x] **PowerSync + Supabase :** Schema, connector, config env (OFF par défaut)
+- [ ] **Recovery disaster :** Nouveau PC → restauration en 1 min (infra prête, test prod à faire)
+- [x] **Silent Update :** `watchProductsByCategory` + `CatalogBloc`
+- [x] **Dashboard analytique :**
+  - CA jour sur place / livraison, tickets, panier moyen
+  - Top 5 produits, heures de pointe (`fl_chart`)
+  - Food cost théorique vs ventes (RecipeItems seed)
+  - [ ] Performances par serveur (upsell) — post-MVP
+- [x] **Export comptable :** CSV `;` BOM UTF-8, TVA + modes de règlement
+- [ ] **Multi-tenant :** Isolation par restaurant, dashboard consolidé — post-MVP
+- [x] **Pointage employés :** Clock-in/out PIN sur écran auth
+- [ ] **Pertes/Démarque :** Scan produit → "Périmé" — post-MVP
+- [ ] **Menus programmés :** Créneaux horaires Ftour — post-MVP
+- [ ] **Food Cost automatique :** Déduction ingrédients à la vente — analytique seule
 
 ### Livrables
-- Synchronisation cloud testée (couper internet → reconnecter → vérifier intégrité)
-- Dashboard avec graphiques
-- Export CSV fonctionnel
-- Multi-restaurant opérationnel
+- [ ] Sync cloud testée bout-en-bout Supabase (local OK, prod pending)
+- [x] Dashboard avec graphiques
+- [x] Export CSV fonctionnel (Bureau Windows)
+- [ ] Multi-restaurant opérationnel — post-MVP
 
 ---
 

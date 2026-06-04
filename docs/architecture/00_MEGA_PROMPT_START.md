@@ -3,7 +3,7 @@
 > Ce fichier est le prompt maître à fournir à ton agent IA (Cursor, Windsurf, Cline, Claude)
 > pour initialiser le projet. Copie-colle l'intégralité ci-dessous dans l'agent.
 
-**Statut sprints :** voir [`SPRINT_STATUS.md`](SPRINT_STATUS.md) et [`11_roadmap_and_business.md`](11_roadmap_and_business.md) (Sprints 0–3 ✅).
+**Statut sprints :** voir [`SPRINT_STATUS.md`](SPRINT_STATUS.md), [`11_roadmap_and_business.md`](11_roadmap_and_business.md) et [`FINAL_AUDIT.md`](FINAL_AUDIT.md) (Sprints 0–5 livrés · note globale **7,4/10**).
 
 ---
 
