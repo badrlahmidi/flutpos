@@ -1,0 +1,23 @@
+name: network
+description: "Ritagestion — WebSocket, mDNS, sync queue"
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+
+dependencies:
+  core:
+    path: ../core
+  ns_ds_network:
+    path: ../ns_ds_network
+  drift: ^2.33.0
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  shelf_web_socket: ^2.0.1
+  uuid: ^4.5.1
+  web_socket_channel: ^3.0.2
+  dio: ^5.8.0+1
+
+dev_dependencies:
+  test: ^1.25.0

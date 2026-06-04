@@ -1,0 +1,6 @@
+# melos_managed_dependency_overrides: core,ns_ds_network
+dependency_overrides:
+  core:
+    path: ..\\core
+  ns_ds_network:
+    path: ..\\ns_ds_network

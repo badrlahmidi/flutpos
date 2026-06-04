@@ -1,0 +1,30 @@
+name: ritagestion
+
+packages:
+  - packages/**
+  - apps/**
+
+command:
+  bootstrap:
+    runPubGetInParallel: true
+
+scripts:
+  analyze:
+    run: melos exec -- dart analyze
+    description: Analyse statique sur tous les packages
+
+  test:core:
+    run: melos exec --scope=core -- dart test
+    description: Tests du package core
+
+  test:ns_ds_network:
+    run: melos exec --scope=ns_ds_network -- dart test
+    description: Tests mDNS ns_ds_network
+
+  test:network:
+    run: melos exec --scope=network -- dart test
+    description: Tests package network (Sprint 2)
+
+  build:drift:
+    run: cd packages/core && dart run build_runner build --delete-conflicting-outputs
+    description: Génération du code Drift (.g.dart)

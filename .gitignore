@@ -1,0 +1,36 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+**/build/
+*.iml
+.idea/
+
+# Coverage & test
+coverage/
+.test/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local DB & logs
+*.db
+*.sqlite
+ritagestion.db
+**/ritagestion_print_logs/
+
+# Env / secrets
+.env
+.env.*
+*.pem
+credentials.json
+
+# Windows / Flutter ephemeral
+**/windows/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/macos/flutter/ephemeral/
+
+# Cursor
+.cursor/

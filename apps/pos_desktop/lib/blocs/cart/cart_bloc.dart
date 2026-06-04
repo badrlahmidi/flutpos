@@ -1,0 +1,344 @@
+import 'package:core/core.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'cart_event.dart';
+import 'cart_state.dart';
+
+class CartBloc extends Bloc<CartEvent, CartState> {
+  CartBloc({
+    required OrderRepository orderRepository,
+    required CashSessionRepository cashSessionRepository,
+  })  : _orderRepository = orderRepository,
+        _cashSessionRepository = cashSessionRepository,
+        super(const CartInitial()) {
+    on<CartStarted>(_onStarted);
+    on<CartOrderTypeChanged>(_onOrderTypeChanged);
+    on<CartItemAdded>(_onItemAdded);
+    on<CartItemAddedWithModifiers>(_onItemAddedWithModifiers);
+    on<CartItemRemoved>(_onItemRemoved);
+    on<CartItemQuantityUpdated>(_onQuantityUpdated);
+    on<CartItemModifierAdded>(_onModifierAdded);
+    on<CartReloadRequested>(_onReloadRequested);
+    on<CartProformaRequested>(_onProformaRequested);
+    on<CartDiscountApplied>(_onDiscountApplied);
+    on<CartItemVoided>(_onItemVoided);
+  }
+
+  final OrderRepository _orderRepository;
+  final CashSessionRepository _cashSessionRepository;
+  String? _orderId;
+  String? _cashierId;
+
+  Future<void> _onStarted(CartStarted event, Emitter<CartState> emit) async {
+    emit(const CartLoading());
+    try {
+      final session =
+          await _cashSessionRepository.getOpenSessionForCashier(event.user.id);
+      if (session == null) {
+        emit(const CartError(
+          'Aucune session ouverte — ouvrez la caisse (menu Trésorerie)',
+        ));
+        return;
+      }
+      final order = await _orderRepository.createOrder(
+        sessionId: session.id,
+        waiterId: event.user.id,
+        orderType: OrderType.dineIn,
+      );
+      _cashierId = event.user.id;
+      _orderId = order.id;
+      await _emitOrder(emit);
+    } catch (e) {
+      emit(CartError('Impossible d\'ouvrir la commande : $e'));
+    }
+  }
+
+  Future<void> _recoverOrEmitError(
+    Emitter<CartState> emit,
+    Object error,
+    String context,
+  ) async {
+    try {
+      await _emitOrder(emit);
+    } catch (_) {
+      emit(CartError('$context : $error'));
+    }
+  }
+
+  Future<void> _onOrderTypeChanged(
+    CartOrderTypeChanged event,
+    Emitter<CartState> emit,
+  ) async {
+    final orderId = _orderId;
+    if (orderId == null) {
+      return;
+    }
+
+    try {
+      await _orderRepository.updateOrderType(
+        orderId: orderId,
+        orderType: event.orderType,
+      );
+      await _emitOrder(emit);
+    } catch (e) {
+      await _recoverOrEmitError(emit, e, 'Type de commande');
+    }
+  }
+
+  Future<void> _onItemAdded(
+    CartItemAdded event,
+    Emitter<CartState> emit,
+  ) async {
+    final orderId = _orderId;
+    if (orderId == null) {
+      return;
+    }
+
+    final current = state.orderOrNull;
+    if (current == null) {
+      return;
+    }
+
+    emit(const CartLoading());
+
+    try {
+      final orderType = current.orderType;
+      final mergeTarget = _findMergeableLine(current, event.product.id);
+
+      if (mergeTarget != null) {
+        await _orderRepository.updateOrderItemQuantity(
+          orderItemId: mergeTarget.orderItem.id,
+          quantity: mergeTarget.orderItem.quantity + 1,
+        );
+      } else {
+        await _orderRepository.addOrderItem(
+          orderId: orderId,
+          product: event.product,
+          orderType: orderType,
+        );
+      }
+      await _emitOrder(emit);
+    } catch (e) {
+      await _recoverOrEmitError(emit, e, 'Ajout article');
+    }
+  }
+
+  Future<void> _onItemAddedWithModifiers(
+    CartItemAddedWithModifiers event,
+    Emitter<CartState> emit,
+  ) async {
+    final orderId = _orderId;
+    final current = state.orderOrNull;
+    if (orderId == null || current == null) {
+      return;
+    }
+
+    emit(const CartLoading());
+
+    try {
+      final item = await _orderRepository.addOrderItem(
+        orderId: orderId,
+        product: event.product,
+        orderType: current.orderType,
+      );
+      for (final option in event.options) {
+        await _orderRepository.addOrderItemModifier(
+          orderItemId: item.id,
+          option: option,
+        );
+      }
+      await _emitOrder(emit);
+    } catch (e) {
+      await _recoverOrEmitError(emit, e, 'Ajout avec modificateurs');
+    }
+  }
+
+  Future<void> _onItemRemoved(
+    CartItemRemoved event,
+    Emitter<CartState> emit,
+  ) async {
+    if (_orderId == null) {
+      return;
+    }
+
+    emit(const CartLoading());
+    try {
+      await _orderRepository.removeOrderItem(event.orderItemId);
+      await _emitOrder(emit);
+    } catch (e) {
+      await _recoverOrEmitError(emit, e, 'Suppression');
+    }
+  }
+
+  Future<void> _onQuantityUpdated(
+    CartItemQuantityUpdated event,
+    Emitter<CartState> emit,
+  ) async {
+    if (_orderId == null) {
+      return;
+    }
+
+    emit(const CartLoading());
+
+    try {
+      if (event.quantity <= 0) {
+        await _orderRepository.removeOrderItem(event.orderItemId);
+      } else {
+        await _orderRepository.updateOrderItemQuantity(
+          orderItemId: event.orderItemId,
+          quantity: event.quantity,
+        );
+      }
+      await _emitOrder(emit);
+    } catch (e) {
+      await _recoverOrEmitError(emit, e, 'Quantité');
+    }
+  }
+
+  Future<void> _onDiscountApplied(
+    CartDiscountApplied event,
+    Emitter<CartState> emit,
+  ) async {
+    final orderId = _orderId;
+    if (orderId == null) {
+      return;
+    }
+
+    emit(const CartLoading());
+    try {
+      await _orderRepository.applyDiscount(
+        userId: event.managerUserId,
+        orderId: orderId,
+        discountType: event.discountType,
+        discountValue: event.discountValue,
+        reason: event.reason,
+        authorizedByUserId: event.managerUserId,
+      );
+      await _emitOrder(emit);
+    } catch (e) {
+      emit(CartError('Remise : $e'));
+    }
+  }
+
+  Future<void> _onItemVoided(
+    CartItemVoided event,
+    Emitter<CartState> emit,
+  ) async {
+    if (_orderId == null) {
+      return;
+    }
+
+    emit(const CartLoading());
+    try {
+      await _orderRepository.voidOrderItem(
+        userId: event.managerUserId,
+        orderItemId: event.orderItemId,
+        reason: event.reason,
+        authorizedByUserId: event.managerUserId,
+      );
+      await _emitOrder(emit);
+    } catch (e) {
+      emit(CartError('Annulation : $e'));
+    }
+  }
+
+  Future<void> _onProformaRequested(
+    CartProformaRequested event,
+    Emitter<CartState> emit,
+  ) async {
+    final orderId = _orderId;
+    if (orderId == null) {
+      return;
+    }
+
+    emit(const CartLoading());
+    try {
+      await _orderRepository.markOrderProforma(orderId);
+      await _emitOrder(emit);
+    } catch (e) {
+      emit(CartError('Proforma : $e'));
+    }
+  }
+
+  Future<void> _onReloadRequested(
+    CartReloadRequested event,
+    Emitter<CartState> emit,
+  ) async {
+    final orderId = _orderId;
+    final cashierId = _cashierId;
+    if (orderId == null || cashierId == null) {
+      return;
+    }
+
+    emit(const CartLoading());
+    try {
+      final current = await _orderRepository.getCompleteOrder(orderId);
+      if (current != null && current.order.status == 'PAID') {
+        final session =
+            await _cashSessionRepository.getOpenSessionForCashier(cashierId);
+        if (session == null) {
+          emit(const CartError('Session caisse fermée — rouvrez la caisse'));
+          return;
+        }
+        final order = await _orderRepository.createOrder(
+          sessionId: session.id,
+          waiterId: cashierId,
+          orderType: OrderType.dineIn,
+        );
+        _orderId = order.id;
+      }
+      await _emitOrder(emit);
+    } catch (e) {
+      emit(CartError('Rechargement panier : $e'));
+    }
+  }
+
+  Future<void> _onModifierAdded(
+    CartItemModifierAdded event,
+    Emitter<CartState> emit,
+  ) async {
+    if (_orderId == null) {
+      return;
+    }
+
+    emit(const CartLoading());
+    try {
+      await _orderRepository.addOrderItemModifier(
+        orderItemId: event.orderItemId,
+        option: event.option,
+      );
+      await _emitOrder(emit);
+    } catch (e) {
+      await _recoverOrEmitError(emit, e, 'Modificateur');
+    }
+  }
+
+  OrderItemWithProduct? _findMergeableLine(
+    CompleteOrder order,
+    String productId,
+  ) {
+    for (final line in order.items) {
+      if (line.product.id == productId &&
+          line.modifiers.isEmpty &&
+          line.orderItem.status != 'VOIDED') {
+        return line;
+      }
+    }
+    return null;
+  }
+
+  Future<void> _emitOrder(Emitter<CartState> emit) async {
+    final orderId = _orderId;
+    if (orderId == null) {
+      emit(const CartError('Commande non initialisée'));
+      return;
+    }
+
+    final complete = await _orderRepository.getCompleteOrder(orderId);
+    if (complete == null) {
+      emit(const CartError('Commande introuvable'));
+      return;
+    }
+    emit(CartReady(complete));
+  }
+}

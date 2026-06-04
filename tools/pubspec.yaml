@@ -1,0 +1,16 @@
+name: ritagestion_tools
+description: "Scripts utilitaires Ritagestion (seed, mocks)"
+publish_to: none
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+
+dependencies:
+  bcrypt: ^1.1.3
+  core:
+    path: ../packages/core
+  drift: ^2.33.0
+  network:
+    path: ../packages/network
+  path: ^1.9.1
+  uuid: ^4.5.1

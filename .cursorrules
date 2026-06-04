@@ -1,0 +1,57 @@
+# Ritagestion POS — Règles pour l'Agent IA
+
+## Directive Obligatoire de Contexte
+
+**AVANT toute génération de code, toute proposition de solution, ou toute modification de fichier, l'agent IA DOIT impérativement :**
+
+1. Lire et analyser l'intégralité du dossier `docs/architecture/` situé à la racine du projet.
+2. S'assurer que le code généré respecte strictement les décisions documentées dans les 12 fichiers suivants :
+   - `docs/architecture/00_MEGA_PROMPT_START.md` — Prompt de démarrage et instructions sprint par sprint.
+   - `docs/architecture/01_project_context_and_stack.md` — Stack technique, versions, et règles d'architecture.
+   - `docs/architecture/02_database_schema.md` — 22 tables Drift/SQLite avec relations et règles de calcul.
+   - `docs/architecture/03_network_protocol.md` — Protocole réseau WebSocket/mDNS.
+   - `docs/architecture/04_business_scenarios_qa.md` — 50 scénarios métier restauration (Product Backlog).
+   - `docs/architecture/05_design_system.md` — Design system, couleurs, espacements, règles UX Fat-Finger.
+   - `docs/architecture/06_folder_structure.md` — Clean Architecture, monorepo Melos, conventions de nommage.
+   - `docs/architecture/07_security_and_auth.md` — Hachage PIN, RBAC, matrice permissions, audit trail.
+   - `docs/architecture/08_error_handling_strategy.md` — Résilience par couche, recovery, mode dégradé.
+   - `docs/architecture/09_testing_strategy.md` — Pyramide de tests, coverage, BLoC testing.
+   - `docs/architecture/10_i18n_and_localization.md` — Bilingue FR/AR, devise MAD, contenu légal Maroc.
+   - `docs/architecture/11_roadmap_and_business.md` — Roadmap 6 sprints, conseils métier marché marocain.
+
+## Règles Générales
+
+- **Offline-First :** Aucune action métier ne doit dépendre d'un appel réseau externe. Toujours écrire en local (Drift) d'abord.
+- **UUID obligatoire :** Tous les identifiants de tables utilisent des UUID (String).
+- **Immutabilité des prix :** Les prix sont figés dans `OrderItems.unitPrice` au moment de la commande.
+- **BLoC Pattern :** Utiliser `flutter_bloc` pour la gestion d'état. Séparer strictement logique métier et UI.
+- **Idempotence réseau :** Chaque message WebSocket doit contenir un `messageId` unique.
+- **Pas de couleurs en dur :** Utiliser `Theme.of(context).colorScheme` et `Theme.of(context).textTheme` uniquement.
+- **Grille de 8px :** Tous les espacements sont des multiples de 8 (4, 8, 16, 24, 32).
+- **Touch targets ≥ 64x64px :** Application utilisée sur écran tactile par des serveurs en mouvement.
+- **Zéro scroll horizontal :** Grilles réactives ou listes verticales uniquement.
+- **Clean Architecture :** Presentation → Domain → Data. Ne jamais importer Drift dans un widget.
+- **Sécurité :** PIN hashé (bcrypt), actions sensibles = PIN Manager + AuditTrail obligatoire.
+- **Tests :** 100% coverage sur les calculs financiers. 90% sur les BLoCs.
+
+## Stack Technique (Ne pas modifier)
+
+- Flutter ^3.40.0 / Dart ^3.8.0
+- flutter_bloc ^9.0.0
+- drift ^3.0.0 + sqlite3_flutter_libs
+- powersync ^1.5.0
+- unified_esc_pos_printer ^1.2.0
+- shelf + shelf_router + shelf_web_socket (serveur local)
+- ns_ds_network (mDNS)
+- desktop_multi_window + window_manager (UI Desktop)
+- bcrypt (hachage PIN)
+- sentry_flutter (crash reporting production)
+
+## Structure Monorepo
+
+```
+packages/core/        → BDD, modèles, logique métier
+packages/network/     → WebSocket, mDNS, sync
+apps/pos_desktop/     → Application Caisse Windows
+apps/waiter_mobile/   → Application Serveurs Android/iOS
+```

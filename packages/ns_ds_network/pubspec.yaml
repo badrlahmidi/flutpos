@@ -1,0 +1,13 @@
+name: ns_ds_network
+description: "Ritagestion — Découverte et annonce mDNS LAN (_ritajpos._tcp)"
+version: 1.0.5
+publish_to: none
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+
+dependencies:
+  mdns_dart: ^2.2.1
+
+dev_dependencies:
+  test: ^1.25.0

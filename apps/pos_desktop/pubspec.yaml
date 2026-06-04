@@ -1,0 +1,36 @@
+name: pos_desktop
+description: "Ritagestion — Application Caisse PC (Windows)"
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+  flutter: ">=3.40.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  core:
+    path: ../../packages/core
+  drift: ^2.33.0
+  network:
+    path: ../../packages/network
+  cupertino_icons: ^1.0.8
+  flutter_bloc: ^9.0.0
+  equatable: ^2.0.7
+  intl: ^0.20.2
+  google_fonts: ^6.2.1
+  path: ^1.9.0
+  path_provider: ^2.1.5
+  sqlite3_flutter_libs: ^0.5.42
+  window_manager: ^0.4.3
+  get_it: ^8.0.3
+  unified_esc_pos_printer: ^3.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
