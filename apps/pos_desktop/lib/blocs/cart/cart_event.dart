@@ -200,3 +200,13 @@ final class CartItemCourseChanged extends CartEvent {
 final class CartCourseFireRequested extends CartEvent {
   const CartCourseFireRequested();
 }
+
+/// Met à jour la note globale du ticket (persistée en BDD).
+final class CartOrderNotesChanged extends CartEvent {
+  const CartOrderNotesChanged(this.notes);
+
+  final String notes;
+
+  @override
+  List<Object?> get props => [notes];
+}

@@ -42,6 +42,7 @@ final testProduct = Product(
   taxRate: 20.0,
   trackStock: false,
   currentStock: 0,
+  productType: 'standard',
   sortOrder: 0,
   isActive: true,
 );

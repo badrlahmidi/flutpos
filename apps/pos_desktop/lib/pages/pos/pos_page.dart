@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../blocs/cart/cart_bloc.dart';
@@ -13,8 +14,8 @@ import '../../blocs/catalog/catalog_event.dart';
 import '../../blocs/catalog/catalog_state.dart';
 import '../../di/app_bootstrap.dart';
 import '../../di/service_locator.dart';
+import '../../navigation/app_session.dart';
 import '../../platform/desktop_window.dart';
-import '../payment/payment_page.dart';
 import '../../services/print/pos_print_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/pos_design_tokens.dart';
@@ -24,10 +25,6 @@ import '../../utils/discount_flow.dart';
 import '../../utils/manager_auth.dart';
 import '../../widgets/dialogs/void_item_dialog.dart';
 import '../../widgets/widgets.dart';
-import '../auth/auth_page.dart';
-import '../floor_plan/floor_plan_page.dart';
-import '../session/session_hub_page.dart';
-import '../backoffice/analytics_dashboard_page.dart';
 import 'delivery/delivery_orders_panel.dart';
 import 'modifiers/modifier_selection_dialog.dart';
 
@@ -264,19 +261,13 @@ class _PosViewState extends State<_PosView> with WindowListener {
 
   void _onServiceModeChanged(ServiceMode mode) {
     if (mode == ServiceMode.tableService && mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => FloorPlanPage(user: widget.user),
-        ),
-      );
+      context.go('/floor');
     }
   }
 
   void _lockRegister() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const AuthPage()),
-      (_) => false,
-    );
+    AppSession.instance.clear();
+    context.go('/');
   }
 
   void _onFireCourseResult(BuildContext context, CartState state) {
@@ -339,11 +330,7 @@ class _PosViewState extends State<_PosView> with WindowListener {
   }
 
   Future<void> _openTreasury() async {
-    final refreshed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => SessionHubPage(user: widget.user),
-      ),
-    );
+    final refreshed = await context.push<bool>('/treasury');
 
     if (!mounted) {
       return;
@@ -355,22 +342,11 @@ class _PosViewState extends State<_PosView> with WindowListener {
   }
 
   void _openDashboard() {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const AnalyticsDashboardPage(),
-      ),
-    );
+    context.go('/backoffice/analytics');
   }
 
   Future<void> _onPay(CompleteOrder order) async {
-    final paid = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => PaymentPage(
-          orderId: order.order.id,
-          user: widget.user,
-        ),
-      ),
-    );
+    final paid = await context.push<bool>('/payment/${order.order.id}');
 
     if (!mounted || paid != true) {
       return;
@@ -513,34 +489,52 @@ class _PosViewState extends State<_PosView> with WindowListener {
                     curr.fireCourseResult?.courseNumber),
         listener: _onFireCourseResult,
         child: Scaffold(
-        backgroundColor: PosDesignTokens.shellBackground,
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        backgroundColor: Colors.transparent,
+        body: Stack(
           children: [
-            PosTopBar(
-              lanOnline: server.isRunning,
-              clientCount: server.clientRegistry.count,
-              workspace: _workspace,
-              onWorkspaceSelected: (w) => setState(() => _workspace = w),
-              onSync: () {
-                context.read<CatalogBloc>().add(const CatalogStarted());
-                _loadCategoryCounts();
-              },
-              onPrint: () {
-                final order = context.read<CartBloc>().state.orderOrNull;
-                if (order != null) {
-                  _onProforma(order);
-                }
-              },
-              onHistory: _openTreasury,
-              onSettings: _openDashboard,
-              onLanguageToggle: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Basculer AR — catalogue bilingue actif')),
-                );
-              },
-              onServiceModeChanged: _onServiceModeChanged,
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(0.7, -0.6),
+                    radius: 1.5,
+                    colors: [
+                      Color(0xFF1E2638),
+                      Color(0xFF0F1117),
+                    ],
+                  ),
+                ),
+              ),
             ),
+            Positioned.fill(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  PosTopBar(
+                    lanOnline: server.isRunning,
+                    clientCount: server.clientRegistry.count,
+                    workspace: _workspace,
+                    onHome: () => context.go('/menu'),
+                    onWorkspaceSelected: (w) => setState(() => _workspace = w),
+                    onSync: () {
+                      context.read<CatalogBloc>().add(const CatalogStarted());
+                      _loadCategoryCounts();
+                    },
+                    onPrint: () {
+                      final order = context.read<CartBloc>().state.orderOrNull;
+                      if (order != null) {
+                        _onProforma(order);
+                      }
+                    },
+                    onHistory: _openTreasury,
+                    onSettings: _openDashboard,
+                    onLanguageToggle: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Basculer AR — catalogue bilingue actif')),
+                      );
+                    },
+                    onServiceModeChanged: _onServiceModeChanged,
+                  ),
             Expanded(
               child: BlocBuilder<CatalogBloc, CatalogState>(
                 builder: (context, catalogState) {
@@ -704,6 +698,12 @@ class _PosViewState extends State<_PosView> with WindowListener {
                                 onPay: currentOrder == null
                                     ? null
                                     : () => _onPay(currentOrder),
+                                orderNotes: currentOrder?.order.notes,
+                                onOrderNotesChanged: cartState.isOrderLocked
+                                    ? null
+                                    : (notes) => context
+                                        .read<CartBloc>()
+                                        .add(CartOrderNotesChanged(notes)),
                               ),
                         ),
                       ],
@@ -715,6 +715,9 @@ class _PosViewState extends State<_PosView> with WindowListener {
             ),
           ],
         ),
+      ),
+      ],
+      ),
       ),
       ),
       ),

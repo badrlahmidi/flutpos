@@ -25,6 +25,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     on<CartActiveCourseSelected>(_onActiveCourseSelected);
     on<CartItemCourseChanged>(_onItemCourseChanged);
     on<CartCourseFireRequested>(_onCourseFireRequested);
+    on<CartOrderNotesChanged>(_onOrderNotesChanged);
   }
 
   final OrderRepository _orderRepository;
@@ -121,6 +122,32 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       await _emitOrder(emit);
     } catch (e) {
       await _recoverOrEmitError(emit, e, 'Type de commande');
+    }
+  }
+
+  Future<void> _onOrderNotesChanged(
+    CartOrderNotesChanged event,
+    Emitter<CartState> emit,
+  ) async {
+    final orderId = _orderId;
+    if (orderId == null) {
+      return;
+    }
+
+    final current = state.orderOrNull;
+    final normalized = event.notes.trim().isEmpty ? null : event.notes.trim();
+    if (current == null || current.order.notes == normalized) {
+      return;
+    }
+
+    try {
+      await _orderRepository.updateOrderNotes(
+        orderId: orderId,
+        notes: normalized,
+      );
+      await _emitOrder(emit);
+    } catch (e) {
+      await _recoverOrEmitError(emit, e, 'Note de commande');
     }
   }
 

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
+import '../../theme/app_typography.dart';
 import '../../theme/pos_design_tokens.dart';
 import '../../utils/price_formatter.dart';
 import '../atoms/auto_direction_text_field.dart';
@@ -37,6 +40,8 @@ class CartPanel extends StatefulWidget {
     this.onActiveCourseSelected,
     this.onItemCourseChanged,
     this.canClaimNextCourse = false,
+    this.orderNotes,
+    this.onOrderNotesChanged,
   });
 
   final User user;
@@ -66,6 +71,8 @@ class CartPanel extends StatefulWidget {
   final ValueChanged<int>? onActiveCourseSelected;
   final void Function(OrderItemWithProduct line, int course)? onItemCourseChanged;
   final bool canClaimNextCourse;
+  final String? orderNotes;
+  final ValueChanged<String>? onOrderNotesChanged;
 
   @override
   State<CartPanel> createState() => _CartPanelState();
@@ -73,9 +80,46 @@ class CartPanel extends StatefulWidget {
 
 class _CartPanelState extends State<CartPanel> {
   final _orderNotesController = TextEditingController();
+  Timer? _notesDebounce;
+  double _cartScale = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _orderNotesController.text = widget.orderNotes ?? '';
+  }
+
+  @override
+  void didUpdateWidget(CartPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final incoming = widget.orderNotes ?? '';
+    if (incoming != (oldWidget.orderNotes ?? '') &&
+        incoming != _orderNotesController.text) {
+      _orderNotesController.text = incoming;
+    }
+    if (widget.items.length > oldWidget.items.length) {
+      _pulseCart();
+    }
+  }
+
+  Future<void> _pulseCart() async {
+    setState(() => _cartScale = 1.04);
+    await Future<void>.delayed(const Duration(milliseconds: 140));
+    if (mounted) {
+      setState(() => _cartScale = 1);
+    }
+  }
+
+  void _onOrderNotesEdited(String value) {
+    _notesDebounce?.cancel();
+    _notesDebounce = Timer(const Duration(milliseconds: 400), () {
+      widget.onOrderNotesChanged?.call(value);
+    });
+  }
 
   @override
   void dispose() {
+    _notesDebounce?.cancel();
     _orderNotesController.dispose();
     super.dispose();
   }
@@ -89,15 +133,27 @@ class _CartPanelState extends State<CartPanel> {
   Widget build(BuildContext context) {
     final hasItems = widget.items.isNotEmpty;
     final table = widget.tableLabel ?? 'Comptoir';
+    final orderTypeLabel = _orderTypeLabel(widget.orderType);
 
-    return Container(
-      color: PosDesignTokens.cardBackground,
+    return AnimatedScale(
+      scale: _cartScale,
+      duration: const Duration(milliseconds: 140),
+      curve: Curves.easeOutBack,
+      alignment: Alignment.centerRight,
+      child: Container(
+      decoration: const BoxDecoration(
+        color: PosDesignTokens.cardBackground,
+        border: Border(
+          left: BorderSide(color: PosDesignTokens.borderLight),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Header(
             userName: widget.user.name,
             tableLabel: table,
+            orderTypeLabel: orderTypeLabel,
             onLock: widget.onLock,
           ),
           if (widget.deliveryLabel != null)
@@ -141,6 +197,8 @@ class _CartPanelState extends State<CartPanel> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: AutoDirectionTextField(
               controller: _orderNotesController,
+              readOnly: widget.isOrderLocked,
+              onChanged: widget.isOrderLocked ? null : _onOrderNotesEdited,
               decoration: const InputDecoration(
                 labelText: 'Note de commande',
                 hintText: 'Instructions spéciales...',
@@ -203,113 +261,34 @@ class _CartPanelState extends State<CartPanel> {
                         },
                       ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                _TotalLine('Sous-total', PriceFormatter.format(widget.subtotal)),
-                const SizedBox(height: 6),
-                _TotalLine(
-                  'TVA (${_taxRateLabel.toStringAsFixed(0)} %)',
-                  PriceFormatter.format(widget.taxAmount),
-                ),
-                if (widget.discountAmount > 0) ...[
-                  const SizedBox(height: 6),
-                  _TotalLine(
-                    'Remise',
-                    '- ${PriceFormatter.format(widget.discountAmount)}',
-                    editable: true,
-                    onEdit: widget.onDiscount,
-                  ),
-                ],
-                const Divider(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'TOTAL',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                        color: PosDesignTokens.textMuted,
-                      ),
-                    ),
-                    Text(
-                      PriceFormatter.format(widget.total),
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: PosDesignTokens.primaryBlue,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _SecondaryAction(
-                    label: 'REMISE',
-                    onPressed: hasItems && !widget.isOrderLocked
-                        ? widget.onDiscount
-                        : null,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _SecondaryAction(
-                    label: 'PROFORMA',
-                    onPressed: hasItems && !widget.isProforma && !widget.isOrderLocked
-                        ? widget.onProforma
-                        : null,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _SecondaryAction(
-                    label: 'EN ATTENTE',
-                    onPressed: null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (widget.canClaimNextCourse)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: _PrimaryAction(
-                label: 'RÉCLAMER LA SUITE',
-                icon: Icons.restaurant_menu,
-                color: PosDesignTokens.primaryBlueDark,
-                onPressed: hasItems ? widget.onClaimNextCourse : null,
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: _PrimaryAction(
-              label: 'ENVOYER EN CUISINE',
-              icon: Icons.restaurant,
-              color: PosDesignTokens.primaryBlue,
-              onPressed: hasItems ? widget.onSendToKitchen : null,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: _PrimaryAction(
-              label: 'PAYER ${PriceFormatter.format(widget.total)}',
-              icon: Icons.account_balance_wallet_outlined,
-              color: PosDesignTokens.payOrange,
-              onPressed: hasItems ? widget.onPay : null,
-            ),
+          _CartFooter(
+            subtotal: widget.subtotal,
+            taxAmount: widget.taxAmount,
+            taxRateLabel: _taxRateLabel,
+            discountAmount: widget.discountAmount,
+            total: widget.total,
+            hasItems: hasItems,
+            isOrderLocked: widget.isOrderLocked,
+            isProforma: widget.isProforma,
+            canClaimNextCourse: widget.canClaimNextCourse,
+            onDiscount: widget.onDiscount,
+            onProforma: widget.onProforma,
+            onClaimNextCourse: widget.onClaimNextCourse,
+            onSendToKitchen: widget.onSendToKitchen,
+            onPay: widget.onPay,
           ),
         ],
       ),
+    ),
     );
+  }
+
+  static String _orderTypeLabel(OrderType type) {
+    return switch (type) {
+      OrderType.dineIn => 'Sur place',
+      OrderType.takeaway => 'Emporter',
+      OrderType.delivery => 'Livraison',
+    };
   }
 }
 
@@ -317,11 +296,13 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.userName,
     required this.tableLabel,
+    required this.orderTypeLabel,
     required this.onLock,
   });
 
   final String userName;
   final String tableLabel;
+  final String orderTypeLabel;
   final VoidCallback onLock;
 
   @override
@@ -356,6 +337,25 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: 2),
                 Row(
                   children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: PosDesignTokens.primaryBlue.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        orderTypeLabel,
+                        style: const TextStyle(
+                          color: PosDesignTokens.primaryBlue,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
                     Text(
                       tableLabel,
                       style: const TextStyle(
@@ -375,6 +375,201 @@ class _Header extends StatelessWidget {
             icon: const Icon(Icons.lock_outline, size: 20),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CartFooter extends StatelessWidget {
+  const _CartFooter({
+    required this.subtotal,
+    required this.taxAmount,
+    required this.taxRateLabel,
+    required this.discountAmount,
+    required this.total,
+    required this.hasItems,
+    required this.isOrderLocked,
+    required this.isProforma,
+    required this.canClaimNextCourse,
+    this.onDiscount,
+    this.onProforma,
+    this.onClaimNextCourse,
+    this.onSendToKitchen,
+    this.onPay,
+  });
+
+  final double subtotal;
+  final double taxAmount;
+  final double taxRateLabel;
+  final double discountAmount;
+  final double total;
+  final bool hasItems;
+  final bool isOrderLocked;
+  final bool isProforma;
+  final bool canClaimNextCourse;
+  final VoidCallback? onDiscount;
+  final VoidCallback? onProforma;
+  final VoidCallback? onClaimNextCourse;
+  final VoidCallback? onSendToKitchen;
+  final VoidCallback? onPay;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: PosDesignTokens.cardBackground,
+        border: Border(top: BorderSide(color: scheme.outline)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _TotalLine('Sous-total', PriceFormatter.format(subtotal)),
+            const SizedBox(height: 6),
+            _TotalLine(
+              'TVA (${taxRateLabel.toStringAsFixed(0)} %)',
+              PriceFormatter.format(taxAmount),
+            ),
+            if (discountAmount > 0) ...[
+              const SizedBox(height: 6),
+              _TotalLine(
+                'Remise',
+                '- ${PriceFormatter.format(discountAmount)}',
+                editable: true,
+                onEdit: onDiscount,
+              ),
+            ],
+            const Divider(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'TOTAL',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: PosDesignTokens.textMuted,
+                  ),
+                ),
+                Text(
+                  PriceFormatter.format(total),
+                  style: AppTypography.priceStyle(scheme).copyWith(fontSize: 26),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _SecondaryAction(
+                    label: 'REMISE',
+                    onPressed:
+                        hasItems && !isOrderLocked ? onDiscount : null,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _SecondaryAction(
+                    label: 'PROFORMA',
+                    onPressed: hasItems && !isProforma && !isOrderLocked
+                        ? onProforma
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _SecondaryAction(
+                    label: 'EN ATTENTE',
+                    onPressed: null,
+                  ),
+                ),
+              ],
+            ),
+            if (canClaimNextCourse) ...[
+              const SizedBox(height: 8),
+              _PrimaryAction(
+                label: 'RÉCLAMER LA SUITE',
+                icon: Icons.restaurant_menu,
+                color: PosDesignTokens.primaryBlueDark,
+                onPressed: hasItems ? onClaimNextCourse : null,
+              ),
+            ],
+            const SizedBox(height: 8),
+            _PrimaryAction(
+              label: 'ENVOYER EN CUISINE',
+              icon: Icons.restaurant,
+              color: PosDesignTokens.primaryBlue,
+              onPressed: hasItems ? onSendToKitchen : null,
+            ),
+            const SizedBox(height: 8),
+            _PayButton(
+              label: 'PAYER ${PriceFormatter.format(total)}',
+              onPressed: hasItems ? onPay : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PayButton extends StatelessWidget {
+  const _PayButton({required this.label, this.onPressed});
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: Ink(
+          height: 64,
+          decoration: BoxDecoration(
+            gradient: onPressed != null
+                ? const LinearGradient(
+                    colors: [
+                      PosDesignTokens.stockGreen,
+                      Color(0xFF22C55E),
+                    ],
+                  )
+                : null,
+            color: onPressed == null ? PosDesignTokens.borderLight : null,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.account_balance_wallet_outlined,
+                color: onPressed != null ? Colors.white : PosDesignTokens.textMuted,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: TextStyle(
+                  color: onPressed != null ? Colors.white : PosDesignTokens.textMuted,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

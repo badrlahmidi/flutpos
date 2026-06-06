@@ -116,6 +116,12 @@ abstract class OrderRepository {
     required OrderType orderType,
   });
 
+  /// Note globale sur le ticket (allergies, instructions service, etc.).
+  Future<Order> updateOrderNotes({
+    required String orderId,
+    required String? notes,
+  });
+
   /// Note provisoire — passe la commande en [PROFORMA] (plus d'ajout d'articles).
   Future<Order> markOrderProforma(String orderId);
 

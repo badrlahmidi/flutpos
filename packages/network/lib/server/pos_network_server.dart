@@ -27,6 +27,7 @@ class PosNetworkServer {
     WsMessageHandler? messageHandler,
     this.version = '1.0.0',
     this.port = NsDsNetworkConstants.defaultPort,
+    this.announceMdns = true,
   })  : _database = database,
         _cashSessionRepository = cashSessionRepository ??
             CashSessionRepositoryImpl(
@@ -70,6 +71,9 @@ class PosNetworkServer {
   /// Port d'écoute HTTP/WebSocket.
   final int port;
 
+  /// Annonce mDNS au démarrage (désactivé en tests d'intégration).
+  final bool announceMdns;
+
   HttpServer? _httpServer;
   Timer? _heartbeatTimer;
 
@@ -84,6 +88,9 @@ class PosNetworkServer {
 
   /// Indique si le serveur est démarré.
   bool get isRunning => _httpServer != null;
+
+  /// Port effectif après [start] (utile quand [port] vaut `0`).
+  int? get boundPort => _httpServer?.port;
 
   /// Démarre le serveur Shelf, le WebSocket et l'annonce mDNS.
   Future<void> start() async {
@@ -101,11 +108,13 @@ class PosNetworkServer {
 
     _httpServer = await shelf_io.serve(
       handler,
-      InternetAddress.anyIPv4,
+      InternetAddress.loopbackIPv4,
       port,
     );
 
-    await NsDsNetwork.instance.registerService(port: port);
+    if (announceMdns) {
+      await NsDsNetwork.instance.registerService(port: boundPort ?? port);
+    }
 
     _heartbeatTimer = Timer.periodic(
       const Duration(seconds: 10),
@@ -135,7 +144,9 @@ class PosNetworkServer {
       await server.close(force: true);
     }
 
-    await NsDsNetwork.instance.unregisterService();
+    if (announceMdns) {
+      await NsDsNetwork.instance.unregisterService();
+    }
     print('[PosNetworkServer] Arrêté.');
   }
 

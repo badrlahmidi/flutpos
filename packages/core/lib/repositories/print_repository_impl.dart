@@ -54,4 +54,55 @@ class PrintRepositoryImpl implements PrintRepository {
     }
     return getPrintStationById(stationId);
   }
+
+  @override
+  Future<void> updateRestaurantConfig({
+    required String name,
+    String? address,
+    String? phone,
+    String? ice,
+    String? rc,
+    String? identifiantFiscal,
+  }) async {
+    final config = await getRestaurantConfig();
+    if (config == null) {
+      return;
+    }
+    await (_db.update(_db.restaurantConfig)
+          ..where((c) => c.id.equals(config.id)))
+        .write(
+      RestaurantConfigCompanion(
+        name: Value(name),
+        address: Value(address),
+        phone: Value(phone),
+        ice: Value(ice),
+        rc: Value(rc),
+        identifiantFiscal: Value(identifiantFiscal),
+        updatedAt: Value(DateTime.now().toUtc()),
+      ),
+    );
+  }
+
+  @override
+  Future<List<PrintStation>> getAllPrintStations() {
+    return _db.select(_db.printStations).get();
+  }
+
+  @override
+  Future<void> savePrintStation(PrintStation station) async {
+    await _db.into(_db.printStations).insertOnConflictUpdate(
+          PrintStationsCompanion(
+            id: Value(station.id),
+            name: Value(station.name),
+            ipAddress: Value(station.ipAddress),
+            type: Value(station.type),
+            isActive: Value(station.isActive),
+          ),
+        );
+  }
+
+  @override
+  Future<void> deletePrintStation(String id) async {
+    await (_db.delete(_db.printStations)..where((s) => s.id.equals(id))).go();
+  }
 }

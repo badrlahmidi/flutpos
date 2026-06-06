@@ -1,6 +1,8 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../blocs/payment/payment_bloc.dart';
 import '../../blocs/payment/payment_event.dart';
@@ -11,6 +13,7 @@ import '../../utils/manager_auth.dart';
 import '../../widgets/dialogs/apply_discount_dialog.dart';
 import '../../widgets/dialogs/voucher_dialog.dart';
 import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/price_formatter.dart';
 import '../../widgets/atoms/amount_numpad.dart';
 import '../../widgets/atoms/pos_button.dart';
@@ -18,6 +21,7 @@ import '../../widgets/atoms/price_tag.dart';
 import 'widgets/enterprise_invoice_section.dart';
 import 'widgets/mad_quick_bills.dart';
 import 'widgets/payment_method_bar.dart';
+import 'widgets/mad_visual_change.dart';
 
 /// Écran d'encaissement (split, monnaie MAD, multi-paiements).
 class PaymentPage extends StatelessWidget {
@@ -77,6 +81,16 @@ Future<void> _onPaymentCompleted(
     return;
   }
 
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => const _PaymentSuccessDialog(),
+  );
+
+  if (!context.mounted) {
+    return;
+  }
+
   final message = receipt.ok
       ? (receipt.simulated
           ? (isEnterpriseInvoice
@@ -89,7 +103,7 @@ Future<void> _onPaymentCompleted(
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text(message)),
   );
-  Navigator.of(context).pop(true);
+  context.pop(true);
 }
 
 class _PaymentView extends StatelessWidget {
@@ -120,7 +134,7 @@ class _PaymentView extends StatelessWidget {
             title: const Text('Encaissement'),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () => context.pop(false),
             ),
           ),
           body: switch (state) {
@@ -203,12 +217,13 @@ class _ReadyViewState extends State<_ReadyView> {
                   padding: const EdgeInsets.all(AppSpacing.m),
                   decoration: BoxDecoration(
                     color: scheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(AppSpacing.s),
+                    borderRadius: BorderRadius.circular(AppSpacing.l),
+                    border: Border.all(color: scheme.outline),
                   ),
                   child: Text(
                     ready.entryAmount.isEmpty ? '0' : ready.entryAmount,
                     textAlign: TextAlign.end,
-                    style: theme.textTheme.headlineLarge,
+                    style: AppTypography.priceStyle(scheme).copyWith(fontSize: 32),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.m),
@@ -354,6 +369,11 @@ class _SummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.l),
+        side: BorderSide(color: theme.colorScheme.outline),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
@@ -412,8 +432,8 @@ class _SummaryCard extends StatelessWidget {
           Text(label, style: theme.textTheme.bodyMedium),
           Text(
             value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: bold ? FontWeight.w700 : null,
+            style: AppTypography.priceStyle(theme.colorScheme).copyWith(
+              fontSize: bold ? 16 : 14,
               color: bold ? theme.colorScheme.primary : null,
             ),
           ),
@@ -475,36 +495,48 @@ class _ChangeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Card(
-      color: theme.colorScheme.primaryContainer,
+      elevation: 0,
+      color: scheme.primaryContainer.withValues(alpha: 0.15),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: scheme.primary.withValues(alpha: 0.3)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Monnaie à rendre',
-              style: theme.textTheme.titleMedium,
-            ),
-            PriceTag(amount: change.changeAmount, emphasized: true),
-            const SizedBox(height: AppSpacing.s),
-            Wrap(
-              spacing: AppSpacing.s,
-              runSpacing: AppSpacing.s,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                for (final entry in change.breakdown)
-                  Chip(
-                    label: Text(
-                      '${entry.count}× ${entry.denomination.label}',
-                    ),
+                Text(
+                  'Monnaie à rendre',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
+                Text(
+                  PriceFormatter.format(change.changeAmount),
+                  style: AppTypography.priceStyle(scheme).copyWith(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: scheme.primary,
+                  ),
+                ),
               ],
             ),
+            const Divider(height: AppSpacing.m),
+            MadVisualChange(breakdown: change.breakdown),
           ],
         ),
       ),
-    );
+    )
+        .animate()
+        .fadeIn(duration: 300.ms)
+        .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic);
   }
 }
 
@@ -519,6 +551,66 @@ class _ErrorView extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.l),
         child: Text(message, textAlign: TextAlign.center),
+      ),
+    );
+  }
+}
+
+class _PaymentSuccessDialog extends StatefulWidget {
+  const _PaymentSuccessDialog();
+
+  @override
+  State<_PaymentSuccessDialog> createState() => _PaymentSuccessDialogState();
+}
+
+class _PaymentSuccessDialogState extends State<_PaymentSuccessDialog> {
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(milliseconds: 850), () {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Dialog(
+      backgroundColor: scheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.check_circle_rounded,
+              size: 88,
+              color: scheme.primary,
+            )
+                .animate()
+                .scale(
+                  begin: const Offset(0.2, 0.2),
+                  end: const Offset(1, 1),
+                  duration: 500.ms,
+                  curve: Curves.elasticOut,
+                )
+                .fadeIn(duration: 250.ms),
+            const SizedBox(height: AppSpacing.m),
+            Text(
+              'Paiement réussi',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            )
+                .animate(delay: 150.ms)
+                .fadeIn(duration: 300.ms)
+                .slideY(begin: 0.2, end: 0),
+          ],
+        ),
       ),
     );
   }

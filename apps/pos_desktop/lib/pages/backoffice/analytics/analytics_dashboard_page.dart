@@ -1,23 +1,27 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../blocs/analytics_dashboard/analytics_dashboard_bloc.dart';
-import '../../blocs/analytics_dashboard/analytics_dashboard_event.dart';
-import '../../blocs/analytics_dashboard/analytics_dashboard_state.dart';
-import '../../di/service_locator.dart';
-import '../../theme/app_spacing.dart';
-import '../../utils/price_formatter.dart';
-import 'widgets/dashboard_kpi_card.dart';
-import 'widgets/food_cost_panel.dart';
-import 'widgets/hourly_sales_chart.dart';
-import 'widgets/top_products_chart.dart';
-import 'accounting_export_page.dart';
+import '../../../blocs/analytics_dashboard/analytics_dashboard_bloc.dart';
+import '../../../blocs/analytics_dashboard/analytics_dashboard_event.dart';
+import '../../../blocs/analytics_dashboard/analytics_dashboard_state.dart';
+import '../../../di/service_locator.dart';
+import '../../../theme/app_spacing.dart';
+import '../../../utils/price_formatter.dart';
+import '../../../widgets/backoffice/backoffice_page_header.dart';
+import '../../../widgets/atoms/loading_skeleton.dart';
+import '../widgets/dashboard_kpi_card.dart';
+import '../widgets/food_cost_panel.dart';
+import '../widgets/hourly_sales_chart.dart';
+import '../widgets/top_products_chart.dart';
 
 /// Tableau de bord analytique — KPI, graphiques, food cost.
 class AnalyticsDashboardPage extends StatelessWidget {
-  const AnalyticsDashboardPage({super.key});
+  const AnalyticsDashboardPage({super.key, this.embeddedInShell = false});
+
+  final bool embeddedInShell;
 
   static final DateFormat _dayLabel = DateFormat('EEEE d MMMM yyyy', 'fr_FR');
 
@@ -27,13 +31,15 @@ class AnalyticsDashboardPage extends StatelessWidget {
       create: (_) => AnalyticsDashboardBloc(
         analyticsRepository: sl<AnalyticsRepository>(),
       )..add(const AnalyticsDashboardStarted()),
-      child: const _AnalyticsDashboardView(),
+      child: _AnalyticsDashboardView(embeddedInShell: embeddedInShell),
     );
   }
 }
 
 class _AnalyticsDashboardView extends StatelessWidget {
-  const _AnalyticsDashboardView();
+  const _AnalyticsDashboardView({required this.embeddedInShell});
+
+  final bool embeddedInShell;
 
   @override
   Widget build(BuildContext context) {
@@ -41,34 +47,33 @@ class _AnalyticsDashboardView extends StatelessWidget {
     final scheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard analytique'),
-        actions: [
-          IconButton(
-            tooltip: 'Export comptable CSV',
-            onPressed: () {
-              Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(
-                  builder: (_) => const AccountingExportPage(),
+      appBar: embeddedInShell
+          ? null
+          : AppBar(
+              title: const Text('Dashboard analytique'),
+              actions: [
+                IconButton(
+                  tooltip: 'Export comptable CSV',
+                  onPressed: () => context.go('/backoffice/accounting'),
+                  icon: const Icon(Icons.file_download_outlined),
                 ),
-              );
-            },
-            icon: const Icon(Icons.file_download_outlined),
-          ),
-          IconButton(
-            tooltip: 'Actualiser',
-            onPressed: () => context
-                .read<AnalyticsDashboardBloc>()
-                .add(const AnalyticsDashboardRefreshRequested()),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
+                IconButton(
+                  tooltip: 'Actualiser',
+                  onPressed: () => context
+                      .read<AnalyticsDashboardBloc>()
+                      .add(const AnalyticsDashboardRefreshRequested()),
+                  icon: const Icon(Icons.refresh),
+                ),
+              ],
+            ),
       body: BlocBuilder<AnalyticsDashboardBloc, AnalyticsDashboardState>(
         builder: (context, state) {
           if (state is AnalyticsDashboardLoading ||
               state is AnalyticsDashboardInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return const Padding(
+              padding: EdgeInsets.all(AppSpacing.l),
+              child: LoadingSkeletonList(itemCount: 6, itemHeight: 96),
+            );
           }
 
           if (state is AnalyticsDashboardError) {
@@ -116,8 +121,24 @@ class _AnalyticsDashboardView extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.l),
               children: [
-                Text(dayLabel, style: theme.textTheme.titleMedium),
-                const SizedBox(height: AppSpacing.l),
+                if (embeddedInShell)
+                  BackofficePageHeader(
+                    title: 'Dashboard analytique',
+                    subtitle: dayLabel,
+                    trailing: IconButton(
+                      tooltip: 'Actualiser',
+                      onPressed: () => context
+                          .read<AnalyticsDashboardBloc>()
+                          .add(const AnalyticsDashboardRefreshRequested()),
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  )
+                else
+                  Text(dayLabel, style: theme.textTheme.titleMedium),
+                if (embeddedInShell)
+                  const SizedBox(height: AppSpacing.l)
+                else
+                  const SizedBox(height: AppSpacing.l),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final crossCount = constraints.maxWidth > 900 ? 4 : 2;

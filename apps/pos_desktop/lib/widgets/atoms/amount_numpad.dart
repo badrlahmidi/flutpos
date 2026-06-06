@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 
 /// Pavé numérique montants (≥ 64 px, virgule décimale).
@@ -17,7 +18,7 @@ class AmountNumpad extends StatelessWidget {
   final VoidCallback onClear;
   final bool enabled;
 
-  static const double _keySize = AppSpacing.minTouchTarget;
+  static const double _keySize = AppSpacing.minTouchTarget + 4;
 
   @override
   Widget build(BuildContext context) {
@@ -75,25 +76,29 @@ class AmountNumpad extends StatelessWidget {
     VoidCallback? onTap,
     String? tooltip,
   }) {
+    final scheme = theme.colorScheme;
+
     return Semantics(
       button: true,
       label: tooltip ?? label,
       child: Material(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppSpacing.s),
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppSpacing.s + 4),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: enabled ? onTap : null,
+          splashColor: scheme.primary.withValues(alpha: 0.15),
           child: SizedBox(
             width: _keySize,
             height: _keySize,
             child: Center(
               child: icon != null
-                  ? Icon(icon, size: 28)
+                  ? Icon(icon, size: 28, color: scheme.onSurface)
                   : Text(
                       label ?? '',
                       style: theme.textTheme.headlineLarge?.copyWith(
-                        fontSize: 28,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
             ),

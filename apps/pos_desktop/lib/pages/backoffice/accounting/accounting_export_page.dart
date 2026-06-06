@@ -2,15 +2,18 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../di/service_locator.dart';
-import '../../services/accounting_export_service.dart';
-import '../../theme/app_spacing.dart';
-import '../../utils/price_formatter.dart';
-import '../../widgets/atoms/pos_button.dart';
+import '../../../di/service_locator.dart';
+import '../../../services/accounting_export_service.dart';
+import '../../../theme/app_spacing.dart';
+import '../../../utils/price_formatter.dart';
+import '../../../widgets/atoms/pos_button.dart';
+import '../../../widgets/backoffice/backoffice_page_header.dart';
 
 /// Export comptable mensuel (CSV → Bureau Windows).
 class AccountingExportPage extends StatefulWidget {
-  const AccountingExportPage({super.key});
+  const AccountingExportPage({super.key, this.embeddedInShell = false});
+
+  final bool embeddedInShell;
 
   @override
   State<AccountingExportPage> createState() => _AccountingExportPageState();
@@ -111,14 +114,21 @@ class _AccountingExportPageState extends State<AccountingExportPage> {
     final preview = _preview;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Export comptable'),
-      ),
+      appBar: widget.embeddedInShell
+          ? null
+          : AppBar(
+              title: const Text('Export comptable'),
+            ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(AppSpacing.l),
               children: [
+                if (widget.embeddedInShell)
+                  BackofficePageHeader(
+                    title: 'Export comptable',
+                    subtitle: 'CSV mensuel vers le Bureau',
+                  ),
                 Row(
                   children: [
                     IconButton(

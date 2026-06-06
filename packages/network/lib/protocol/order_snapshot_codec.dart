@@ -17,6 +17,7 @@ abstract final class OrderSnapshotCodec {
         'orderType': o.orderType,
         'status': o.status,
         'guestCount': o.guestCount,
+        'notes': o.notes,
         'createdAt': o.createdAt.toUtc().toIso8601String(),
         'updatedAt': o.updatedAt?.toUtc().toIso8601String(),
       },

@@ -28,4 +28,11 @@ abstract final class AppTypography {
       ),
     );
   }
+
+  /// Style monospace pour montants et prix.
+  static TextStyle priceStyle(ColorScheme scheme) => GoogleFonts.jetBrainsMono(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: scheme.onSurface,
+      );
 }

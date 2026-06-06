@@ -66,6 +66,9 @@ abstract final class TicketContentBuilder {
 
       'Serveur: ${order.waiter.name}',
 
+      if (order.order.notes != null && order.order.notes!.isNotEmpty)
+        'Note: ${order.order.notes}',
+
       if (isCourseClaim && firedCourseNumber != null)
         '*** RECLAME — ${CourseHelpers.labelForCourse(firedCourseNumber).toUpperCase()} ***',
 
@@ -430,6 +433,9 @@ abstract final class TicketContentBuilder {
       'Type: ${_orderTypeLabel(order.orderType)}',
 
       'Caissier: ${order.waiter.name}',
+
+      if (order.order.notes != null && order.order.notes!.isNotEmpty)
+        'Note: ${order.order.notes}',
 
       if (proforma) 'Statut: PROFORMA (table verrouillée)',
 

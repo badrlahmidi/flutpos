@@ -23,7 +23,12 @@ class CategoryBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: PosDesignTokens.cardBackground,
+      decoration: const BoxDecoration(
+        color: PosDesignTokens.cardBackground,
+        border: Border(
+          right: BorderSide(color: PosDesignTokens.borderLight),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -107,13 +112,28 @@ class _CategoryTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(PosDesignTokens.radiusLg),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(PosDesignTokens.radiusLg),
             border: Border.all(color: border),
           ),
           child: Row(
             children: [
+              if (selected)
+                Container(
+                  width: 4,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: PosDesignTokens.primaryBlue,
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(PosDesignTokens.radiusLg),
+                    ),
+                  ),
+                ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: Row(
+                    children: [
               Container(
                 width: 40,
                 height: 40,
@@ -145,6 +165,10 @@ class _CategoryTile extends StatelessWidget {
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: selected ? Colors.white : PosDesignTokens.textMuted,
+                  ),
+                ),
+              ),
+            ],
                   ),
                 ),
               ),

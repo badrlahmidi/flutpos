@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_typography.dart';
 import '../../theme/pos_design_tokens.dart';
 import '../../utils/price_formatter.dart';
 
@@ -15,6 +16,7 @@ class ProductCard extends StatelessWidget {
     this.description,
     this.inStock = true,
     this.isFavorite = false,
+    this.productType = 'standard',
     this.onFavoriteToggle,
   });
 
@@ -26,6 +28,7 @@ class ProductCard extends StatelessWidget {
   final String? description;
   final bool inStock;
   final bool isFavorite;
+  final String productType;
   final VoidCallback? onFavoriteToggle;
 
   @override
@@ -57,6 +60,36 @@ class ProductCard extends StatelessWidget {
                       ),
                       child: _ProductImage(imageUrl: imageUrl),
                     ),
+                    if (productType == 'composed')
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: PosDesignTokens.primaryBlue,
+                            borderRadius: BorderRadius.circular(6.0),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.menu_book, color: Colors.white, size: 12),
+                              SizedBox(width: 4),
+                              Text(
+                                'Recette',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     Positioned(
                       top: 8,
                       right: 8,
@@ -113,11 +146,9 @@ class ProductCard extends StatelessWidget {
                         children: [
                           Text(
                             PriceFormatter.format(price),
-                            style: const TextStyle(
-                              color: PosDesignTokens.primaryBlue,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
-                            ),
+                            style: AppTypography.priceStyle(
+                              Theme.of(context).colorScheme,
+                            ).copyWith(fontSize: 15),
                           ),
                           const Spacer(),
                           if (inStock)
@@ -134,6 +165,26 @@ class ProductCard extends StatelessWidget {
                                 'En stock',
                                 style: TextStyle(
                                   color: PosDesignTokens.stockGreen,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: PosDesignTokens.offlineRed
+                                    .withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'Rupture',
+                                style: TextStyle(
+                                  color: PosDesignTokens.offlineRed,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                 ),

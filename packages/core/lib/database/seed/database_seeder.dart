@@ -466,4 +466,23 @@ Future<void> _seedIngredientsAndRecipes(AppDatabase db, DateTime now) async {
       ),
     ]);
   });
+
+  await db.batch((batch) {
+    batch.insertAll(db.kitchenNotes, [
+      KitchenNotesCompanion.insert(
+        name: 'Sans oignon',
+        nameAr: const Value('بدون بصل'),
+        sortOrder: const Value(1),
+      ),
+      KitchenNotesCompanion.insert(
+        name: 'Bien cuit',
+        nameAr: const Value('مطبوخ جيداً'),
+        sortOrder: const Value(2),
+      ),
+      KitchenNotesCompanion.insert(
+        name: 'Peu salé',
+        sortOrder: const Value(3),
+      ),
+    ]);
+  });
 }

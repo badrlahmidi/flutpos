@@ -1,8 +1,8 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
-import '../../../theme/app_spacing.dart';
-import '../../../widgets/atoms/pos_button.dart';
+import '../../../../theme/app_spacing.dart';
+import '../../../../widgets/atoms/pos_button.dart';
 
 /// Formulaire nouvelle réservation (nom, téléphone, couverts, date/heure).
 Future<ReservationFormData?> showReservationFormDialog(

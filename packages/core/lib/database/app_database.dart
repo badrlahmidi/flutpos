@@ -8,6 +8,7 @@ import 'tables/cash_sessions.dart';
 import 'tables/categories.dart';
 import 'tables/discounts.dart';
 import 'tables/ingredients.dart';
+import 'tables/kitchen_notes.dart';
 import 'tables/modifier_groups.dart';
 import 'tables/modifier_options.dart';
 import 'tables/order_item_modifiers.dart';
@@ -55,6 +56,7 @@ part 'app_database.g.dart';
     SyncQueue,
     AuditTrail,
     Vouchers,
+    KitchenNotes,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -64,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
   final bool powerSyncManaged;
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -84,6 +86,16 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 4) {
             await m.createTable(vouchers);
+          }
+          if (from < 5) {
+            await m.addColumn(orders, orders.notes);
+          }
+          if (from < 6) {
+            await m.addColumn(categories, categories.colorHex);
+            await m.createTable(kitchenNotes);
+          }
+          if (from < 7) {
+            await m.addColumn(products, products.productType);
           }
         },
       );

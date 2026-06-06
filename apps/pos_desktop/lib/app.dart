@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'di/app_bootstrap.dart';
-import 'pages/auth/auth_page.dart';
+import 'navigation/app_router.dart';
 import 'theme/app_theme.dart';
 
 /// Racine MaterialApp — démarre sur l'écran PIN.
@@ -36,11 +36,14 @@ class _RitagestionPosAppState extends State<RitagestionPosApp>
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Ritagestion — Caisse',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const AuthPage(),
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.dark,
+      routerConfig: appRouter,
     );
   }
 }
+

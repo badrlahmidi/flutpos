@@ -1,13 +1,15 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../di/service_locator.dart';
-import '../../services/print/pos_print_service.dart';
-import '../../theme/app_spacing.dart';
-import '../../utils/price_formatter.dart';
-import '../../widgets/atoms/pos_button.dart';
-import 'widgets/session_report_panel.dart';
+import '../../../di/service_locator.dart';
+import '../../../services/print/pos_print_service.dart';
+import '../../../theme/app_spacing.dart';
+import '../../../utils/price_formatter.dart';
+import '../../../widgets/atoms/pos_button.dart';
+import '../../../widgets/backoffice/backoffice_page_header.dart';
+import '../../session/widgets/session_report_panel.dart';
 
 /// Clôture Z — comptage réel vs théorique, raison d'écart obligatoire.
 class ZClosePage extends StatefulWidget {
@@ -15,10 +17,12 @@ class ZClosePage extends StatefulWidget {
     super.key,
     required this.user,
     required this.report,
+    this.embeddedInShell = false,
   });
 
   final User user;
   final CashSessionReport report;
+  final bool embeddedInShell;
 
   @override
   State<ZClosePage> createState() => _ZClosePageState();
@@ -93,7 +97,7 @@ class _ZClosePageState extends State<ZClosePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg)),
       );
-      Navigator.of(context).pop(true);
+      context.pop(true);
     } catch (e) {
       if (!mounted) {
         return;
@@ -111,18 +115,30 @@ class _ZClosePageState extends State<ZClosePage> {
     final expected = widget.report.expectedCashBalance;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Clôture Z'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _closing ? null : () => Navigator.of(context).pop(false),
-        ),
-      ),
+      appBar: widget.embeddedInShell
+          ? null
+          : AppBar(
+              title: const Text('Clôture Z'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _closing ? null : () => context.pop(false),
+              ),
+            ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.m),
+        padding: const EdgeInsets.all(AppSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (widget.embeddedInShell)
+              BackofficePageHeader(
+                title: 'Clôture Z',
+                subtitle: 'Comptage physique et impression du rapport',
+                trailing: IconButton(
+                  tooltip: 'Retour trésorerie',
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: _closing ? null : () => context.pop(false),
+                ),
+              ),
             SessionReportPanel(
               report: widget.report,
               title: 'Rapport Z — récapitulatif',

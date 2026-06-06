@@ -1,5 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../di/service_locator.dart';
 import '../../theme/app_spacing.dart';
@@ -140,7 +141,7 @@ class _SplitBillPageState extends State<SplitBillPage> {
                             PosButton(
                               label: 'TERMINÉ',
                               expand: true,
-                              onPressed: () => Navigator.of(context).pop(true),
+                              onPressed: () => context.pop(true),
                             ),
                           ],
                         ),

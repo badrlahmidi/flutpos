@@ -5,15 +5,14 @@ import 'app_spacing.dart';
 import 'app_typography.dart';
 
 abstract final class AppTheme {
-  static ThemeData get light {
-    final colorScheme = AppColors.lightColorScheme;
+  static ThemeData _buildTheme(ColorScheme colorScheme, Color scaffoldColor) {
     final textTheme = AppTypography.textTheme(colorScheme);
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       textTheme: textTheme,
-      scaffoldBackgroundColor: colorScheme.surface,
+      scaffoldBackgroundColor: scaffoldColor,
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.surface,
         foregroundColor: colorScheme.onSurface,
@@ -23,10 +22,13 @@ abstract final class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: colorScheme.surface,
-        elevation: 1,
+        elevation: colorScheme.brightness == Brightness.dark ? 0 : 1,
         margin: const EdgeInsets.all(AppSpacing.s),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.s),
+          borderRadius: BorderRadius.circular(AppSpacing.l),
+          side: colorScheme.brightness == Brightness.dark
+              ? BorderSide(color: colorScheme.outline)
+              : BorderSide.none,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -40,7 +42,7 @@ abstract final class AppTheme {
             vertical: AppSpacing.m,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.s),
+            borderRadius: BorderRadius.circular(AppSpacing.s + 4),
           ),
         ),
       ),
@@ -51,6 +53,9 @@ abstract final class AppTheme {
             AppSpacing.minTouchTarget + AppSpacing.s,
           ),
           padding: const EdgeInsets.all(AppSpacing.m),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.s + 4),
+          ),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
@@ -62,12 +67,35 @@ abstract final class AppTheme {
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: colorScheme.brightness == Brightness.dark
+            ? AppColors.surfaceElevated
+            : null,
         contentPadding: const EdgeInsets.all(AppSpacing.m),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.s),
+          borderRadius: BorderRadius.circular(AppSpacing.s + 2),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.s + 2),
+          borderSide: BorderSide(color: colorScheme.outline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.s + 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+        ),
+      ),
+      dividerTheme: DividerThemeData(
+        color: colorScheme.outline,
+        thickness: 1,
       ),
       splashFactory: InkRipple.splashFactory,
     );
   }
+
+  static ThemeData get light =>
+      _buildTheme(AppColors.lightColorScheme, AppColors.background);
+
+  static ThemeData get dark =>
+      _buildTheme(AppColors.darkColorScheme, AppColors.scaffoldDark);
 }

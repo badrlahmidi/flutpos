@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
 
 /// Tuile table du plan de salle (couleur selon statut).
@@ -21,18 +22,22 @@ class FloorPlanTableTile extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
+    final Color borderColor;
     final Color background;
     final Color foreground;
     switch (snapshot.tileStatus) {
       case FloorPlanTileStatus.free:
-        background = scheme.primaryContainer;
-        foreground = scheme.onPrimaryContainer;
+        borderColor = AppColors.accentGreen;
+        background = scheme.surface;
+        foreground = scheme.onSurface;
       case FloorPlanTileStatus.occupied:
-        background = scheme.errorContainer;
-        foreground = scheme.onErrorContainer;
+        borderColor = AppColors.accentOrange;
+        background = scheme.surfaceContainerHighest;
+        foreground = scheme.onSurface;
       case FloorPlanTileStatus.reservedOrProforma:
-        background = scheme.tertiaryContainer;
-        foreground = scheme.onTertiaryContainer;
+        borderColor = AppColors.accentPurple;
+        background = scheme.surface;
+        foreground = scheme.onSurface;
     }
 
     final timer = snapshot.occupiedDurationLabel;
@@ -41,73 +46,90 @@ class FloorPlanTableTile extends StatelessWidget {
 
     return Material(
       color: background,
-      borderRadius: BorderRadius.circular(AppSpacing.s),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(AppSpacing.s),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: AppSpacing.minTouchTarget,
-            minHeight: AppSpacing.minTouchTarget,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor, width: 2),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.s),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  snapshot.table.name,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  '${snapshot.table.capacity} pl.',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: foreground.withValues(alpha: 0.85),
-                  ),
-                ),
-                if (timer != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: AppSpacing.minTouchTarget,
+              minHeight: AppSpacing.minTouchTarget,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.s),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
                   Text(
-                    timer,
-                    style: theme.textTheme.titleMedium?.copyWith(
+                    snapshot.table.name,
+                    style: theme.textTheme.titleLarge?.copyWith(
                       color: foreground,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
-                if (reservation != null && snapshot.activeOrder == null) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    reservation.customerName,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: foreground,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    _formatReservationTime(reservation.reservedAt),
+                    '${snapshot.table.capacity} pl.',
                     style: theme.textTheme.labelMedium?.copyWith(
-                      color: foreground.withValues(alpha: 0.9),
+                      color: foreground.withValues(alpha: 0.85),
                     ),
                   ),
-                ],
-                if (total != null && total > 0) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    '${total.toStringAsFixed(0)} DH',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: foreground,
-                      fontWeight: FontWeight.w600,
+                  if (timer != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: borderColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        timer,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: borderColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
+                  if (reservation != null && snapshot.activeOrder == null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      reservation.customerName,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      _formatReservationTime(reservation.reservedAt),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: foreground.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
+                  if (total != null && total > 0) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      '${total.toStringAsFixed(0)} DH',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

@@ -79,5 +79,7 @@ export 'utils/order_item_grace.dart';
 export 'utils/print_station_tags.dart';
 export 'utils/order_pricing.dart';
 export 'utils/kitchen_ticket_line_grouper.dart';
+export 'utils/locale_formatting.dart';
 export 'utils/order_totals.dart';
 export 'utils/pin_hasher.dart';
+export 'utils/uuid_generator.dart';

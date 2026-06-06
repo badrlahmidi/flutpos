@@ -98,6 +98,26 @@ class CartItemTile extends StatelessWidget {
                         ),
                       ),
                     ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: PosDesignTokens.primaryBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${CourseHelpers.emojiForCourse(line.orderItem.courseNumber)} ${CourseHelpers.labelForCourse(line.orderItem.courseNumber)}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: PosDesignTokens.primaryBlue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -130,6 +150,11 @@ class CartItemTile extends StatelessWidget {
                   onSelected: (value) {
                     if (value == 'remove' && onRemove != null) {
                       onRemove!();
+                    } else if (value.startsWith('course_') && onCourseChanged != null) {
+                      final c = int.tryParse(value.substring(7));
+                      if (c != null) {
+                        onCourseChanged!(c);
+                      }
                     }
                   },
                   itemBuilder: (_) => [
@@ -138,6 +163,24 @@ class CartItemTile extends StatelessWidget {
                         value: 'remove',
                         child: Text('Supprimer'),
                       ),
+                    if (onCourseChanged != null && !isLocked) ...[
+                      const PopupMenuDivider(),
+                      for (var c = CourseHelpers.minCourse; c <= CourseHelpers.maxCourse; c++)
+                        PopupMenuItem(
+                          value: 'course_$c',
+                          child: Row(
+                            children: [
+                              Text(CourseHelpers.emojiForCourse(c)),
+                              const SizedBox(width: 8),
+                              Text(CourseHelpers.labelForCourse(c)),
+                              if (line.orderItem.courseNumber == c) ...[
+                                const Spacer(),
+                                const Icon(Icons.check, size: 16, color: PosDesignTokens.primaryBlue),
+                              ],
+                            ],
+                          ),
+                        ),
+                    ],
                   ],
                 ),
               ],

@@ -2,19 +2,26 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../blocs/reservations/reservations_bloc.dart';
-import '../../blocs/reservations/reservations_event.dart';
-import '../../blocs/reservations/reservations_state.dart';
-import '../../di/service_locator.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/atoms/pos_button.dart';
+import '../../../blocs/reservations/reservations_bloc.dart';
+import '../../../blocs/reservations/reservations_event.dart';
+import '../../../blocs/reservations/reservations_state.dart';
+import '../../../di/service_locator.dart';
+import '../../../theme/app_spacing.dart';
+import '../../../widgets/atoms/pos_button.dart';
+import '../../../widgets/backoffice/backoffice_page_header.dart';
+import '../../../widgets/atoms/loading_skeleton.dart';
 import 'widgets/reservation_form_dialog.dart';
 
 /// Gestion des réservations à venir.
 class ReservationsPage extends StatelessWidget {
-  const ReservationsPage({super.key, required this.user});
+  const ReservationsPage({
+    super.key,
+    required this.user,
+    this.embeddedInShell = false,
+  });
 
   final User user;
+  final bool embeddedInShell;
 
   @override
   Widget build(BuildContext context) {
@@ -22,13 +29,15 @@ class ReservationsPage extends StatelessWidget {
       create: (_) => ReservationsBloc(
         reservationRepository: sl<ReservationRepository>(),
       )..add(const ReservationsStarted()),
-      child: const _ReservationsView(),
+      child: _ReservationsView(embeddedInShell: embeddedInShell),
     );
   }
 }
 
 class _ReservationsView extends StatelessWidget {
-  const _ReservationsView();
+  const _ReservationsView({required this.embeddedInShell});
+
+  final bool embeddedInShell;
 
   Future<void> _openCreate(BuildContext context, ReservationsReady state) async {
     final submitted = await showReservationFormDialog(
@@ -58,18 +67,20 @@ class _ReservationsView extends StatelessWidget {
     final scheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Réservations'),
-        actions: [
-          IconButton(
-            tooltip: 'Actualiser',
-            icon: const Icon(Icons.refresh),
-            onPressed: () => context
-                .read<ReservationsBloc>()
-                .add(const ReservationsRefreshRequested()),
-          ),
-        ],
-      ),
+      appBar: embeddedInShell
+          ? null
+          : AppBar(
+              title: const Text('Réservations'),
+              actions: [
+                IconButton(
+                  tooltip: 'Actualiser',
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () => context
+                      .read<ReservationsBloc>()
+                      .add(const ReservationsRefreshRequested()),
+                ),
+              ],
+            ),
       floatingActionButton: BlocBuilder<ReservationsBloc, ReservationsState>(
         buildWhen: (p, c) => c is ReservationsReady,
         builder: (context, state) {
@@ -83,7 +94,23 @@ class _ReservationsView extends StatelessWidget {
           );
         },
       ),
-      body: BlocConsumer<ReservationsBloc, ReservationsState>(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (embeddedInShell)
+            BackofficePageHeader(
+              title: 'Réservations',
+              subtitle: 'Réservations à venir',
+              trailing: IconButton(
+                tooltip: 'Actualiser',
+                icon: const Icon(Icons.refresh),
+                onPressed: () => context
+                    .read<ReservationsBloc>()
+                    .add(const ReservationsRefreshRequested()),
+              ),
+            ),
+          Expanded(
+            child: BlocConsumer<ReservationsBloc, ReservationsState>(
         listenWhen: (prev, curr) =>
             curr is ReservationsError && prev is! ReservationsError,
         listener: (context, state) {
@@ -98,8 +125,9 @@ class _ReservationsView extends StatelessWidget {
         },
         builder: (context, state) {
           return switch (state) {
-            ReservationsInitial() || ReservationsLoading() => const Center(
-                child: CircularProgressIndicator(),
+            ReservationsInitial() || ReservationsLoading() => const Padding(
+                padding: EdgeInsets.all(AppSpacing.l),
+                child: LoadingSkeletonList(itemCount: 5),
               ),
             ReservationsReady(:final reservations, :final tables, :final zones) =>
               reservations.isEmpty
@@ -166,6 +194,9 @@ class _ReservationsView extends StatelessWidget {
               ),
           };
         },
+            ),
+          ),
+        ],
       ),
     );
   }

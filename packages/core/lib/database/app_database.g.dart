@@ -3185,6 +3185,17 @@ class $CategoriesTable extends Categories
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _colorHexMeta = const VerificationMeta(
+    'colorHex',
+  );
+  @override
+  late final GeneratedColumn<String> colorHex = GeneratedColumn<String>(
+    'color_hex',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _printStationIdMeta = const VerificationMeta(
     'printStationId',
   );
@@ -3254,6 +3265,7 @@ class $CategoriesTable extends Categories
     name,
     nameAr,
     image,
+    colorHex,
     printStationId,
     sortOrder,
     scheduledStartTime,
@@ -3293,6 +3305,12 @@ class $CategoriesTable extends Categories
       context.handle(
         _imageMeta,
         image.isAcceptableOrUnknown(data['image']!, _imageMeta),
+      );
+    }
+    if (data.containsKey('color_hex')) {
+      context.handle(
+        _colorHexMeta,
+        colorHex.isAcceptableOrUnknown(data['color_hex']!, _colorHexMeta),
       );
     }
     if (data.containsKey('print_station_id')) {
@@ -3359,6 +3377,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.string,
         data['${effectivePrefix}image'],
       ),
+      colorHex: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color_hex'],
+      ),
       printStationId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}print_station_id'],
@@ -3393,6 +3415,7 @@ class Category extends DataClass implements Insertable<Category> {
   final String name;
   final String? nameAr;
   final String? image;
+  final String? colorHex;
   final String? printStationId;
   final int sortOrder;
   final String? scheduledStartTime;
@@ -3403,6 +3426,7 @@ class Category extends DataClass implements Insertable<Category> {
     required this.name,
     this.nameAr,
     this.image,
+    this.colorHex,
     this.printStationId,
     required this.sortOrder,
     this.scheduledStartTime,
@@ -3419,6 +3443,9 @@ class Category extends DataClass implements Insertable<Category> {
     }
     if (!nullToAbsent || image != null) {
       map['image'] = Variable<String>(image);
+    }
+    if (!nullToAbsent || colorHex != null) {
+      map['color_hex'] = Variable<String>(colorHex);
     }
     if (!nullToAbsent || printStationId != null) {
       map['print_station_id'] = Variable<String>(printStationId);
@@ -3444,6 +3471,9 @@ class Category extends DataClass implements Insertable<Category> {
       image: image == null && nullToAbsent
           ? const Value.absent()
           : Value(image),
+      colorHex: colorHex == null && nullToAbsent
+          ? const Value.absent()
+          : Value(colorHex),
       printStationId: printStationId == null && nullToAbsent
           ? const Value.absent()
           : Value(printStationId),
@@ -3468,6 +3498,7 @@ class Category extends DataClass implements Insertable<Category> {
       name: serializer.fromJson<String>(json['name']),
       nameAr: serializer.fromJson<String?>(json['nameAr']),
       image: serializer.fromJson<String?>(json['image']),
+      colorHex: serializer.fromJson<String?>(json['colorHex']),
       printStationId: serializer.fromJson<String?>(json['printStationId']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       scheduledStartTime: serializer.fromJson<String?>(
@@ -3485,6 +3516,7 @@ class Category extends DataClass implements Insertable<Category> {
       'name': serializer.toJson<String>(name),
       'nameAr': serializer.toJson<String?>(nameAr),
       'image': serializer.toJson<String?>(image),
+      'colorHex': serializer.toJson<String?>(colorHex),
       'printStationId': serializer.toJson<String?>(printStationId),
       'sortOrder': serializer.toJson<int>(sortOrder),
       'scheduledStartTime': serializer.toJson<String?>(scheduledStartTime),
@@ -3498,6 +3530,7 @@ class Category extends DataClass implements Insertable<Category> {
     String? name,
     Value<String?> nameAr = const Value.absent(),
     Value<String?> image = const Value.absent(),
+    Value<String?> colorHex = const Value.absent(),
     Value<String?> printStationId = const Value.absent(),
     int? sortOrder,
     Value<String?> scheduledStartTime = const Value.absent(),
@@ -3508,6 +3541,7 @@ class Category extends DataClass implements Insertable<Category> {
     name: name ?? this.name,
     nameAr: nameAr.present ? nameAr.value : this.nameAr,
     image: image.present ? image.value : this.image,
+    colorHex: colorHex.present ? colorHex.value : this.colorHex,
     printStationId: printStationId.present
         ? printStationId.value
         : this.printStationId,
@@ -3526,6 +3560,7 @@ class Category extends DataClass implements Insertable<Category> {
       name: data.name.present ? data.name.value : this.name,
       nameAr: data.nameAr.present ? data.nameAr.value : this.nameAr,
       image: data.image.present ? data.image.value : this.image,
+      colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       printStationId: data.printStationId.present
           ? data.printStationId.value
           : this.printStationId,
@@ -3547,6 +3582,7 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('name: $name, ')
           ..write('nameAr: $nameAr, ')
           ..write('image: $image, ')
+          ..write('colorHex: $colorHex, ')
           ..write('printStationId: $printStationId, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('scheduledStartTime: $scheduledStartTime, ')
@@ -3562,6 +3598,7 @@ class Category extends DataClass implements Insertable<Category> {
     name,
     nameAr,
     image,
+    colorHex,
     printStationId,
     sortOrder,
     scheduledStartTime,
@@ -3576,6 +3613,7 @@ class Category extends DataClass implements Insertable<Category> {
           other.name == this.name &&
           other.nameAr == this.nameAr &&
           other.image == this.image &&
+          other.colorHex == this.colorHex &&
           other.printStationId == this.printStationId &&
           other.sortOrder == this.sortOrder &&
           other.scheduledStartTime == this.scheduledStartTime &&
@@ -3588,6 +3626,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<String> name;
   final Value<String?> nameAr;
   final Value<String?> image;
+  final Value<String?> colorHex;
   final Value<String?> printStationId;
   final Value<int> sortOrder;
   final Value<String?> scheduledStartTime;
@@ -3599,6 +3638,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.name = const Value.absent(),
     this.nameAr = const Value.absent(),
     this.image = const Value.absent(),
+    this.colorHex = const Value.absent(),
     this.printStationId = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.scheduledStartTime = const Value.absent(),
@@ -3611,6 +3651,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     required String name,
     this.nameAr = const Value.absent(),
     this.image = const Value.absent(),
+    this.colorHex = const Value.absent(),
     this.printStationId = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.scheduledStartTime = const Value.absent(),
@@ -3623,6 +3664,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<String>? name,
     Expression<String>? nameAr,
     Expression<String>? image,
+    Expression<String>? colorHex,
     Expression<String>? printStationId,
     Expression<int>? sortOrder,
     Expression<String>? scheduledStartTime,
@@ -3635,6 +3677,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (name != null) 'name': name,
       if (nameAr != null) 'name_ar': nameAr,
       if (image != null) 'image': image,
+      if (colorHex != null) 'color_hex': colorHex,
       if (printStationId != null) 'print_station_id': printStationId,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (scheduledStartTime != null)
@@ -3650,6 +3693,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<String>? name,
     Value<String?>? nameAr,
     Value<String?>? image,
+    Value<String?>? colorHex,
     Value<String?>? printStationId,
     Value<int>? sortOrder,
     Value<String?>? scheduledStartTime,
@@ -3662,6 +3706,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       name: name ?? this.name,
       nameAr: nameAr ?? this.nameAr,
       image: image ?? this.image,
+      colorHex: colorHex ?? this.colorHex,
       printStationId: printStationId ?? this.printStationId,
       sortOrder: sortOrder ?? this.sortOrder,
       scheduledStartTime: scheduledStartTime ?? this.scheduledStartTime,
@@ -3685,6 +3730,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     }
     if (image.present) {
       map['image'] = Variable<String>(image.value);
+    }
+    if (colorHex.present) {
+      map['color_hex'] = Variable<String>(colorHex.value);
     }
     if (printStationId.present) {
       map['print_station_id'] = Variable<String>(printStationId.value);
@@ -3714,6 +3762,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('name: $name, ')
           ..write('nameAr: $nameAr, ')
           ..write('image: $image, ')
+          ..write('colorHex: $colorHex, ')
           ..write('printStationId: $printStationId, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('scheduledStartTime: $scheduledStartTime, ')
@@ -3884,6 +3933,18 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _productTypeMeta = const VerificationMeta(
+    'productType',
+  );
+  @override
+  late final GeneratedColumn<String> productType = GeneratedColumn<String>(
+    'product_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('standard'),
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -3927,6 +3988,7 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     defaultNotes,
     trackStock,
     currentStock,
+    productType,
     sortOrder,
     isActive,
   ];
@@ -4044,6 +4106,15 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         ),
       );
     }
+    if (data.containsKey('product_type')) {
+      context.handle(
+        _productTypeMeta,
+        productType.isAcceptableOrUnknown(
+          data['product_type']!,
+          _productTypeMeta,
+        ),
+      );
+    }
     if (data.containsKey('sort_order')) {
       context.handle(
         _sortOrderMeta,
@@ -4121,6 +4192,10 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         DriftSqlType.double,
         data['${effectivePrefix}current_stock'],
       )!,
+      productType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}product_type'],
+      )!,
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
@@ -4153,6 +4228,7 @@ class Product extends DataClass implements Insertable<Product> {
   final String? defaultNotes;
   final bool trackStock;
   final double currentStock;
+  final String productType;
   final int sortOrder;
   final bool isActive;
   const Product({
@@ -4170,6 +4246,7 @@ class Product extends DataClass implements Insertable<Product> {
     this.defaultNotes,
     required this.trackStock,
     required this.currentStock,
+    required this.productType,
     required this.sortOrder,
     required this.isActive,
   });
@@ -4204,6 +4281,7 @@ class Product extends DataClass implements Insertable<Product> {
     }
     map['track_stock'] = Variable<bool>(trackStock);
     map['current_stock'] = Variable<double>(currentStock);
+    map['product_type'] = Variable<String>(productType);
     map['sort_order'] = Variable<int>(sortOrder);
     map['is_active'] = Variable<bool>(isActive);
     return map;
@@ -4237,6 +4315,7 @@ class Product extends DataClass implements Insertable<Product> {
           : Value(defaultNotes),
       trackStock: Value(trackStock),
       currentStock: Value(currentStock),
+      productType: Value(productType),
       sortOrder: Value(sortOrder),
       isActive: Value(isActive),
     );
@@ -4262,6 +4341,7 @@ class Product extends DataClass implements Insertable<Product> {
       defaultNotes: serializer.fromJson<String?>(json['defaultNotes']),
       trackStock: serializer.fromJson<bool>(json['trackStock']),
       currentStock: serializer.fromJson<double>(json['currentStock']),
+      productType: serializer.fromJson<String>(json['productType']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       isActive: serializer.fromJson<bool>(json['isActive']),
     );
@@ -4284,6 +4364,7 @@ class Product extends DataClass implements Insertable<Product> {
       'defaultNotes': serializer.toJson<String?>(defaultNotes),
       'trackStock': serializer.toJson<bool>(trackStock),
       'currentStock': serializer.toJson<double>(currentStock),
+      'productType': serializer.toJson<String>(productType),
       'sortOrder': serializer.toJson<int>(sortOrder),
       'isActive': serializer.toJson<bool>(isActive),
     };
@@ -4304,6 +4385,7 @@ class Product extends DataClass implements Insertable<Product> {
     Value<String?> defaultNotes = const Value.absent(),
     bool? trackStock,
     double? currentStock,
+    String? productType,
     int? sortOrder,
     bool? isActive,
   }) => Product(
@@ -4325,6 +4407,7 @@ class Product extends DataClass implements Insertable<Product> {
     defaultNotes: defaultNotes.present ? defaultNotes.value : this.defaultNotes,
     trackStock: trackStock ?? this.trackStock,
     currentStock: currentStock ?? this.currentStock,
+    productType: productType ?? this.productType,
     sortOrder: sortOrder ?? this.sortOrder,
     isActive: isActive ?? this.isActive,
   );
@@ -4358,6 +4441,9 @@ class Product extends DataClass implements Insertable<Product> {
       currentStock: data.currentStock.present
           ? data.currentStock.value
           : this.currentStock,
+      productType: data.productType.present
+          ? data.productType.value
+          : this.productType,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
     );
@@ -4380,6 +4466,7 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('defaultNotes: $defaultNotes, ')
           ..write('trackStock: $trackStock, ')
           ..write('currentStock: $currentStock, ')
+          ..write('productType: $productType, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('isActive: $isActive')
           ..write(')'))
@@ -4402,6 +4489,7 @@ class Product extends DataClass implements Insertable<Product> {
     defaultNotes,
     trackStock,
     currentStock,
+    productType,
     sortOrder,
     isActive,
   );
@@ -4423,6 +4511,7 @@ class Product extends DataClass implements Insertable<Product> {
           other.defaultNotes == this.defaultNotes &&
           other.trackStock == this.trackStock &&
           other.currentStock == this.currentStock &&
+          other.productType == this.productType &&
           other.sortOrder == this.sortOrder &&
           other.isActive == this.isActive);
 }
@@ -4442,6 +4531,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<String?> defaultNotes;
   final Value<bool> trackStock;
   final Value<double> currentStock;
+  final Value<String> productType;
   final Value<int> sortOrder;
   final Value<bool> isActive;
   final Value<int> rowid;
@@ -4460,6 +4550,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.defaultNotes = const Value.absent(),
     this.trackStock = const Value.absent(),
     this.currentStock = const Value.absent(),
+    this.productType = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -4479,6 +4570,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.defaultNotes = const Value.absent(),
     this.trackStock = const Value.absent(),
     this.currentStock = const Value.absent(),
+    this.productType = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -4500,6 +4592,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<String>? defaultNotes,
     Expression<bool>? trackStock,
     Expression<double>? currentStock,
+    Expression<String>? productType,
     Expression<int>? sortOrder,
     Expression<bool>? isActive,
     Expression<int>? rowid,
@@ -4519,6 +4612,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (defaultNotes != null) 'default_notes': defaultNotes,
       if (trackStock != null) 'track_stock': trackStock,
       if (currentStock != null) 'current_stock': currentStock,
+      if (productType != null) 'product_type': productType,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (isActive != null) 'is_active': isActive,
       if (rowid != null) 'rowid': rowid,
@@ -4540,6 +4634,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Value<String?>? defaultNotes,
     Value<bool>? trackStock,
     Value<double>? currentStock,
+    Value<String>? productType,
     Value<int>? sortOrder,
     Value<bool>? isActive,
     Value<int>? rowid,
@@ -4559,6 +4654,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       defaultNotes: defaultNotes ?? this.defaultNotes,
       trackStock: trackStock ?? this.trackStock,
       currentStock: currentStock ?? this.currentStock,
+      productType: productType ?? this.productType,
       sortOrder: sortOrder ?? this.sortOrder,
       isActive: isActive ?? this.isActive,
       rowid: rowid ?? this.rowid,
@@ -4610,6 +4706,9 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (currentStock.present) {
       map['current_stock'] = Variable<double>(currentStock.value);
     }
+    if (productType.present) {
+      map['product_type'] = Variable<String>(productType.value);
+    }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
@@ -4639,6 +4738,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('defaultNotes: $defaultNotes, ')
           ..write('trackStock: $trackStock, ')
           ..write('currentStock: $currentStock, ')
+          ..write('productType: $productType, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('isActive: $isActive, ')
           ..write('rowid: $rowid')
@@ -7710,6 +7810,15 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
     requiredDuringInsert: false,
     defaultValue: const Constant(1),
   );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _companyNameMeta = const VerificationMeta(
     'companyName',
   );
@@ -7780,6 +7889,7 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
     discountReason,
     discountAuthorizedBy,
     guestCount,
+    notes,
     companyName,
     companyIce,
     invoiceNumber,
@@ -7894,6 +8004,12 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
         guestCount.isAcceptableOrUnknown(data['guest_count']!, _guestCountMeta),
       );
     }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
     if (data.containsKey('company_name')) {
       context.handle(
         _companyNameMeta,
@@ -7993,6 +8109,10 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
         DriftSqlType.int,
         data['${effectivePrefix}guest_count'],
       )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
       companyName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}company_name'],
@@ -8037,6 +8157,9 @@ class Order extends DataClass implements Insertable<Order> {
   final String? discountAuthorizedBy;
   final int guestCount;
 
+  /// Instructions globales (allergies, événement, etc.).
+  final String? notes;
+
   /// Facture entreprise (scénario #34 / étape 7 Sprint 3).
   final String? companyName;
   final String? companyIce;
@@ -8057,6 +8180,7 @@ class Order extends DataClass implements Insertable<Order> {
     this.discountReason,
     this.discountAuthorizedBy,
     required this.guestCount,
+    this.notes,
     this.companyName,
     this.companyIce,
     this.invoiceNumber,
@@ -8091,6 +8215,9 @@ class Order extends DataClass implements Insertable<Order> {
       map['discount_authorized_by'] = Variable<String>(discountAuthorizedBy);
     }
     map['guest_count'] = Variable<int>(guestCount);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
     if (!nullToAbsent || companyName != null) {
       map['company_name'] = Variable<String>(companyName);
     }
@@ -8134,6 +8261,9 @@ class Order extends DataClass implements Insertable<Order> {
           ? const Value.absent()
           : Value(discountAuthorizedBy),
       guestCount: Value(guestCount),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
       companyName: companyName == null && nullToAbsent
           ? const Value.absent()
           : Value(companyName),
@@ -8171,6 +8301,7 @@ class Order extends DataClass implements Insertable<Order> {
         json['discountAuthorizedBy'],
       ),
       guestCount: serializer.fromJson<int>(json['guestCount']),
+      notes: serializer.fromJson<String?>(json['notes']),
       companyName: serializer.fromJson<String?>(json['companyName']),
       companyIce: serializer.fromJson<String?>(json['companyIce']),
       invoiceNumber: serializer.fromJson<int?>(json['invoiceNumber']),
@@ -8195,6 +8326,7 @@ class Order extends DataClass implements Insertable<Order> {
       'discountReason': serializer.toJson<String?>(discountReason),
       'discountAuthorizedBy': serializer.toJson<String?>(discountAuthorizedBy),
       'guestCount': serializer.toJson<int>(guestCount),
+      'notes': serializer.toJson<String?>(notes),
       'companyName': serializer.toJson<String?>(companyName),
       'companyIce': serializer.toJson<String?>(companyIce),
       'invoiceNumber': serializer.toJson<int?>(invoiceNumber),
@@ -8217,6 +8349,7 @@ class Order extends DataClass implements Insertable<Order> {
     Value<String?> discountReason = const Value.absent(),
     Value<String?> discountAuthorizedBy = const Value.absent(),
     int? guestCount,
+    Value<String?> notes = const Value.absent(),
     Value<String?> companyName = const Value.absent(),
     Value<String?> companyIce = const Value.absent(),
     Value<int?> invoiceNumber = const Value.absent(),
@@ -8242,6 +8375,7 @@ class Order extends DataClass implements Insertable<Order> {
         ? discountAuthorizedBy.value
         : this.discountAuthorizedBy,
     guestCount: guestCount ?? this.guestCount,
+    notes: notes.present ? notes.value : this.notes,
     companyName: companyName.present ? companyName.value : this.companyName,
     companyIce: companyIce.present ? companyIce.value : this.companyIce,
     invoiceNumber: invoiceNumber.present
@@ -8277,6 +8411,7 @@ class Order extends DataClass implements Insertable<Order> {
       guestCount: data.guestCount.present
           ? data.guestCount.value
           : this.guestCount,
+      notes: data.notes.present ? data.notes.value : this.notes,
       companyName: data.companyName.present
           ? data.companyName.value
           : this.companyName,
@@ -8307,6 +8442,7 @@ class Order extends DataClass implements Insertable<Order> {
           ..write('discountReason: $discountReason, ')
           ..write('discountAuthorizedBy: $discountAuthorizedBy, ')
           ..write('guestCount: $guestCount, ')
+          ..write('notes: $notes, ')
           ..write('companyName: $companyName, ')
           ..write('companyIce: $companyIce, ')
           ..write('invoiceNumber: $invoiceNumber, ')
@@ -8331,6 +8467,7 @@ class Order extends DataClass implements Insertable<Order> {
     discountReason,
     discountAuthorizedBy,
     guestCount,
+    notes,
     companyName,
     companyIce,
     invoiceNumber,
@@ -8354,6 +8491,7 @@ class Order extends DataClass implements Insertable<Order> {
           other.discountReason == this.discountReason &&
           other.discountAuthorizedBy == this.discountAuthorizedBy &&
           other.guestCount == this.guestCount &&
+          other.notes == this.notes &&
           other.companyName == this.companyName &&
           other.companyIce == this.companyIce &&
           other.invoiceNumber == this.invoiceNumber &&
@@ -8375,6 +8513,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
   final Value<String?> discountReason;
   final Value<String?> discountAuthorizedBy;
   final Value<int> guestCount;
+  final Value<String?> notes;
   final Value<String?> companyName;
   final Value<String?> companyIce;
   final Value<int?> invoiceNumber;
@@ -8395,6 +8534,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     this.discountReason = const Value.absent(),
     this.discountAuthorizedBy = const Value.absent(),
     this.guestCount = const Value.absent(),
+    this.notes = const Value.absent(),
     this.companyName = const Value.absent(),
     this.companyIce = const Value.absent(),
     this.invoiceNumber = const Value.absent(),
@@ -8416,6 +8556,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     this.discountReason = const Value.absent(),
     this.discountAuthorizedBy = const Value.absent(),
     this.guestCount = const Value.absent(),
+    this.notes = const Value.absent(),
     this.companyName = const Value.absent(),
     this.companyIce = const Value.absent(),
     this.invoiceNumber = const Value.absent(),
@@ -8440,6 +8581,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     Expression<String>? discountReason,
     Expression<String>? discountAuthorizedBy,
     Expression<int>? guestCount,
+    Expression<String>? notes,
     Expression<String>? companyName,
     Expression<String>? companyIce,
     Expression<int>? invoiceNumber,
@@ -8462,6 +8604,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
       if (discountAuthorizedBy != null)
         'discount_authorized_by': discountAuthorizedBy,
       if (guestCount != null) 'guest_count': guestCount,
+      if (notes != null) 'notes': notes,
       if (companyName != null) 'company_name': companyName,
       if (companyIce != null) 'company_ice': companyIce,
       if (invoiceNumber != null) 'invoice_number': invoiceNumber,
@@ -8485,6 +8628,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     Value<String?>? discountReason,
     Value<String?>? discountAuthorizedBy,
     Value<int>? guestCount,
+    Value<String?>? notes,
     Value<String?>? companyName,
     Value<String?>? companyIce,
     Value<int?>? invoiceNumber,
@@ -8506,6 +8650,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
       discountReason: discountReason ?? this.discountReason,
       discountAuthorizedBy: discountAuthorizedBy ?? this.discountAuthorizedBy,
       guestCount: guestCount ?? this.guestCount,
+      notes: notes ?? this.notes,
       companyName: companyName ?? this.companyName,
       companyIce: companyIce ?? this.companyIce,
       invoiceNumber: invoiceNumber ?? this.invoiceNumber,
@@ -8559,6 +8704,9 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     if (guestCount.present) {
       map['guest_count'] = Variable<int>(guestCount.value);
     }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
     if (companyName.present) {
       map['company_name'] = Variable<String>(companyName.value);
     }
@@ -8596,6 +8744,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
           ..write('discountReason: $discountReason, ')
           ..write('discountAuthorizedBy: $discountAuthorizedBy, ')
           ..write('guestCount: $guestCount, ')
+          ..write('notes: $notes, ')
           ..write('companyName: $companyName, ')
           ..write('companyIce: $companyIce, ')
           ..write('invoiceNumber: $invoiceNumber, ')
@@ -12106,6 +12255,356 @@ class VouchersCompanion extends UpdateCompanion<Voucher> {
   }
 }
 
+class $KitchenNotesTable extends KitchenNotes
+    with TableInfo<$KitchenNotesTable, KitchenNote> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $KitchenNotesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newUuid,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameArMeta = const VerificationMeta('nameAr');
+  @override
+  late final GeneratedColumn<String> nameAr = GeneratedColumn<String>(
+    'name_ar',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, nameAr, sortOrder, isActive];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'kitchen_notes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<KitchenNote> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('name_ar')) {
+      context.handle(
+        _nameArMeta,
+        nameAr.isAcceptableOrUnknown(data['name_ar']!, _nameArMeta),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  KitchenNote map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return KitchenNote(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      nameAr: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name_ar'],
+      ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+    );
+  }
+
+  @override
+  $KitchenNotesTable createAlias(String alias) {
+    return $KitchenNotesTable(attachedDatabase, alias);
+  }
+}
+
+class KitchenNote extends DataClass implements Insertable<KitchenNote> {
+  final String id;
+  final String name;
+  final String? nameAr;
+  final int sortOrder;
+  final bool isActive;
+  const KitchenNote({
+    required this.id,
+    required this.name,
+    this.nameAr,
+    required this.sortOrder,
+    required this.isActive,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || nameAr != null) {
+      map['name_ar'] = Variable<String>(nameAr);
+    }
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['is_active'] = Variable<bool>(isActive);
+    return map;
+  }
+
+  KitchenNotesCompanion toCompanion(bool nullToAbsent) {
+    return KitchenNotesCompanion(
+      id: Value(id),
+      name: Value(name),
+      nameAr: nameAr == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nameAr),
+      sortOrder: Value(sortOrder),
+      isActive: Value(isActive),
+    );
+  }
+
+  factory KitchenNote.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return KitchenNote(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      nameAr: serializer.fromJson<String?>(json['nameAr']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'nameAr': serializer.toJson<String?>(nameAr),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'isActive': serializer.toJson<bool>(isActive),
+    };
+  }
+
+  KitchenNote copyWith({
+    String? id,
+    String? name,
+    Value<String?> nameAr = const Value.absent(),
+    int? sortOrder,
+    bool? isActive,
+  }) => KitchenNote(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    nameAr: nameAr.present ? nameAr.value : this.nameAr,
+    sortOrder: sortOrder ?? this.sortOrder,
+    isActive: isActive ?? this.isActive,
+  );
+  KitchenNote copyWithCompanion(KitchenNotesCompanion data) {
+    return KitchenNote(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      nameAr: data.nameAr.present ? data.nameAr.value : this.nameAr,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KitchenNote(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('nameAr: $nameAr, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('isActive: $isActive')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, nameAr, sortOrder, isActive);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is KitchenNote &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.nameAr == this.nameAr &&
+          other.sortOrder == this.sortOrder &&
+          other.isActive == this.isActive);
+}
+
+class KitchenNotesCompanion extends UpdateCompanion<KitchenNote> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String?> nameAr;
+  final Value<int> sortOrder;
+  final Value<bool> isActive;
+  final Value<int> rowid;
+  const KitchenNotesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.nameAr = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  KitchenNotesCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    this.nameAr = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : name = Value(name);
+  static Insertable<KitchenNote> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? nameAr,
+    Expression<int>? sortOrder,
+    Expression<bool>? isActive,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (nameAr != null) 'name_ar': nameAr,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (isActive != null) 'is_active': isActive,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  KitchenNotesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String?>? nameAr,
+    Value<int>? sortOrder,
+    Value<bool>? isActive,
+    Value<int>? rowid,
+  }) {
+    return KitchenNotesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      nameAr: nameAr ?? this.nameAr,
+      sortOrder: sortOrder ?? this.sortOrder,
+      isActive: isActive ?? this.isActive,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (nameAr.present) {
+      map['name_ar'] = Variable<String>(nameAr.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KitchenNotesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('nameAr: $nameAr, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('isActive: $isActive, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -12142,6 +12641,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
   late final $AuditTrailTable auditTrail = $AuditTrailTable(this);
   late final $VouchersTable vouchers = $VouchersTable(this);
+  late final $KitchenNotesTable kitchenNotes = $KitchenNotesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -12171,6 +12671,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     syncQueue,
     auditTrail,
     vouchers,
+    kitchenNotes,
   ];
 }
 
@@ -15297,6 +15798,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       required String name,
       Value<String?> nameAr,
       Value<String?> image,
+      Value<String?> colorHex,
       Value<String?> printStationId,
       Value<int> sortOrder,
       Value<String?> scheduledStartTime,
@@ -15310,6 +15812,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String?> nameAr,
       Value<String?> image,
+      Value<String?> colorHex,
       Value<String?> printStationId,
       Value<int> sortOrder,
       Value<String?> scheduledStartTime,
@@ -15387,6 +15890,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<String> get image => $composableBuilder(
     column: $table.image,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get colorHex => $composableBuilder(
+    column: $table.colorHex,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15488,6 +15996,11 @@ class $$CategoriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get colorHex => $composableBuilder(
+    column: $table.colorHex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -15552,6 +16065,9 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<String> get image =>
       $composableBuilder(column: $table.image, builder: (column) => column);
+
+  GeneratedColumn<String> get colorHex =>
+      $composableBuilder(column: $table.colorHex, builder: (column) => column);
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
@@ -15650,6 +16166,7 @@ class $$CategoriesTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String?> nameAr = const Value.absent(),
                 Value<String?> image = const Value.absent(),
+                Value<String?> colorHex = const Value.absent(),
                 Value<String?> printStationId = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<String?> scheduledStartTime = const Value.absent(),
@@ -15661,6 +16178,7 @@ class $$CategoriesTableTableManager
                 name: name,
                 nameAr: nameAr,
                 image: image,
+                colorHex: colorHex,
                 printStationId: printStationId,
                 sortOrder: sortOrder,
                 scheduledStartTime: scheduledStartTime,
@@ -15674,6 +16192,7 @@ class $$CategoriesTableTableManager
                 required String name,
                 Value<String?> nameAr = const Value.absent(),
                 Value<String?> image = const Value.absent(),
+                Value<String?> colorHex = const Value.absent(),
                 Value<String?> printStationId = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<String?> scheduledStartTime = const Value.absent(),
@@ -15685,6 +16204,7 @@ class $$CategoriesTableTableManager
                 name: name,
                 nameAr: nameAr,
                 image: image,
+                colorHex: colorHex,
                 printStationId: printStationId,
                 sortOrder: sortOrder,
                 scheduledStartTime: scheduledStartTime,
@@ -15799,6 +16319,7 @@ typedef $$ProductsTableCreateCompanionBuilder =
       Value<String?> defaultNotes,
       Value<bool> trackStock,
       Value<double> currentStock,
+      Value<String> productType,
       Value<int> sortOrder,
       Value<bool> isActive,
       Value<int> rowid,
@@ -15819,6 +16340,7 @@ typedef $$ProductsTableUpdateCompanionBuilder =
       Value<String?> defaultNotes,
       Value<bool> trackStock,
       Value<double> currentStock,
+      Value<String> productType,
       Value<int> sortOrder,
       Value<bool> isActive,
       Value<int> rowid,
@@ -15978,6 +16500,11 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<double> get currentStock => $composableBuilder(
     column: $table.currentStock,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get productType => $composableBuilder(
+    column: $table.productType,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16164,6 +16691,11 @@ class $$ProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get productType => $composableBuilder(
+    column: $table.productType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -16255,6 +16787,11 @@ class $$ProductsTableAnnotationComposer
 
   GeneratedColumn<double> get currentStock => $composableBuilder(
     column: $table.currentStock,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get productType => $composableBuilder(
+    column: $table.productType,
     builder: (column) => column,
   );
 
@@ -16410,6 +16947,7 @@ class $$ProductsTableTableManager
                 Value<String?> defaultNotes = const Value.absent(),
                 Value<bool> trackStock = const Value.absent(),
                 Value<double> currentStock = const Value.absent(),
+                Value<String> productType = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -16428,6 +16966,7 @@ class $$ProductsTableTableManager
                 defaultNotes: defaultNotes,
                 trackStock: trackStock,
                 currentStock: currentStock,
+                productType: productType,
                 sortOrder: sortOrder,
                 isActive: isActive,
                 rowid: rowid,
@@ -16448,6 +16987,7 @@ class $$ProductsTableTableManager
                 Value<String?> defaultNotes = const Value.absent(),
                 Value<bool> trackStock = const Value.absent(),
                 Value<double> currentStock = const Value.absent(),
+                Value<String> productType = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -16466,6 +17006,7 @@ class $$ProductsTableTableManager
                 defaultNotes: defaultNotes,
                 trackStock: trackStock,
                 currentStock: currentStock,
+                productType: productType,
                 sortOrder: sortOrder,
                 isActive: isActive,
                 rowid: rowid,
@@ -19689,6 +20230,7 @@ typedef $$OrdersTableCreateCompanionBuilder =
       Value<String?> discountReason,
       Value<String?> discountAuthorizedBy,
       Value<int> guestCount,
+      Value<String?> notes,
       Value<String?> companyName,
       Value<String?> companyIce,
       Value<int?> invoiceNumber,
@@ -19711,6 +20253,7 @@ typedef $$OrdersTableUpdateCompanionBuilder =
       Value<String?> discountReason,
       Value<String?> discountAuthorizedBy,
       Value<int> guestCount,
+      Value<String?> notes,
       Value<String?> companyName,
       Value<String?> companyIce,
       Value<int?> invoiceNumber,
@@ -19908,6 +20451,11 @@ class $$OrdersTableFilterComposer
 
   ColumnFilters<int> get guestCount => $composableBuilder(
     column: $table.guestCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -20158,6 +20706,11 @@ class $$OrdersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get companyName => $composableBuilder(
     column: $table.companyName,
     builder: (column) => ColumnOrderings(column),
@@ -20321,6 +20874,9 @@ class $$OrdersTableAnnotationComposer
     column: $table.guestCount,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
 
   GeneratedColumn<String> get companyName => $composableBuilder(
     column: $table.companyName,
@@ -20560,6 +21116,7 @@ class $$OrdersTableTableManager
                 Value<String?> discountReason = const Value.absent(),
                 Value<String?> discountAuthorizedBy = const Value.absent(),
                 Value<int> guestCount = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<String?> companyName = const Value.absent(),
                 Value<String?> companyIce = const Value.absent(),
                 Value<int?> invoiceNumber = const Value.absent(),
@@ -20580,6 +21137,7 @@ class $$OrdersTableTableManager
                 discountReason: discountReason,
                 discountAuthorizedBy: discountAuthorizedBy,
                 guestCount: guestCount,
+                notes: notes,
                 companyName: companyName,
                 companyIce: companyIce,
                 invoiceNumber: invoiceNumber,
@@ -20602,6 +21160,7 @@ class $$OrdersTableTableManager
                 Value<String?> discountReason = const Value.absent(),
                 Value<String?> discountAuthorizedBy = const Value.absent(),
                 Value<int> guestCount = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<String?> companyName = const Value.absent(),
                 Value<String?> companyIce = const Value.absent(),
                 Value<int?> invoiceNumber = const Value.absent(),
@@ -20622,6 +21181,7 @@ class $$OrdersTableTableManager
                 discountReason: discountReason,
                 discountAuthorizedBy: discountAuthorizedBy,
                 guestCount: guestCount,
+                notes: notes,
                 companyName: companyName,
                 companyIce: companyIce,
                 invoiceNumber: invoiceNumber,
@@ -23583,6 +24143,206 @@ typedef $$VouchersTableProcessedTableManager =
       Voucher,
       PrefetchHooks Function({bool orderId})
     >;
+typedef $$KitchenNotesTableCreateCompanionBuilder =
+    KitchenNotesCompanion Function({
+      Value<String> id,
+      required String name,
+      Value<String?> nameAr,
+      Value<int> sortOrder,
+      Value<bool> isActive,
+      Value<int> rowid,
+    });
+typedef $$KitchenNotesTableUpdateCompanionBuilder =
+    KitchenNotesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String?> nameAr,
+      Value<int> sortOrder,
+      Value<bool> isActive,
+      Value<int> rowid,
+    });
+
+class $$KitchenNotesTableFilterComposer
+    extends Composer<_$AppDatabase, $KitchenNotesTable> {
+  $$KitchenNotesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nameAr => $composableBuilder(
+    column: $table.nameAr,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$KitchenNotesTableOrderingComposer
+    extends Composer<_$AppDatabase, $KitchenNotesTable> {
+  $$KitchenNotesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nameAr => $composableBuilder(
+    column: $table.nameAr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$KitchenNotesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $KitchenNotesTable> {
+  $$KitchenNotesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get nameAr =>
+      $composableBuilder(column: $table.nameAr, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+}
+
+class $$KitchenNotesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $KitchenNotesTable,
+          KitchenNote,
+          $$KitchenNotesTableFilterComposer,
+          $$KitchenNotesTableOrderingComposer,
+          $$KitchenNotesTableAnnotationComposer,
+          $$KitchenNotesTableCreateCompanionBuilder,
+          $$KitchenNotesTableUpdateCompanionBuilder,
+          (
+            KitchenNote,
+            BaseReferences<_$AppDatabase, $KitchenNotesTable, KitchenNote>,
+          ),
+          KitchenNote,
+          PrefetchHooks Function()
+        > {
+  $$KitchenNotesTableTableManager(_$AppDatabase db, $KitchenNotesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$KitchenNotesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$KitchenNotesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$KitchenNotesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> nameAr = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => KitchenNotesCompanion(
+                id: id,
+                name: name,
+                nameAr: nameAr,
+                sortOrder: sortOrder,
+                isActive: isActive,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                required String name,
+                Value<String?> nameAr = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => KitchenNotesCompanion.insert(
+                id: id,
+                name: name,
+                nameAr: nameAr,
+                sortOrder: sortOrder,
+                isActive: isActive,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$KitchenNotesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $KitchenNotesTable,
+      KitchenNote,
+      $$KitchenNotesTableFilterComposer,
+      $$KitchenNotesTableOrderingComposer,
+      $$KitchenNotesTableAnnotationComposer,
+      $$KitchenNotesTableCreateCompanionBuilder,
+      $$KitchenNotesTableUpdateCompanionBuilder,
+      (
+        KitchenNote,
+        BaseReferences<_$AppDatabase, $KitchenNotesTable, KitchenNote>,
+      ),
+      KitchenNote,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -23635,4 +24395,6 @@ class $AppDatabaseManager {
       $$AuditTrailTableTableManager(_db, _db.auditTrail);
   $$VouchersTableTableManager get vouchers =>
       $$VouchersTableTableManager(_db, _db.vouchers);
+  $$KitchenNotesTableTableManager get kitchenNotes =>
+      $$KitchenNotesTableTableManager(_db, _db.kitchenNotes);
 }

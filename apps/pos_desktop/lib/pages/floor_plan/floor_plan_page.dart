@@ -1,19 +1,17 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../blocs/floor_plan/floor_plan_bloc.dart';
 import '../../blocs/floor_plan/floor_plan_event.dart';
 import '../../blocs/floor_plan/floor_plan_state.dart';
 import '../../di/service_locator.dart';
+import '../../navigation/app_session.dart';
+import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/molecules/service_mode_toggle.dart';
-import '../auth/auth_page.dart';
-import '../pos/pos_page.dart';
-import '../reservations/reservations_page.dart';
-import '../kds/kds_page.dart';
-import '../session/session_hub_page.dart';
-import 'split_bill_page.dart';
+import '../../widgets/organisms/top_bar.dart';
 import 'widgets/floor_plan_table_tile.dart';
 import 'widgets/guest_count_dialog.dart';
 import 'widgets/table_operations_sheet.dart';
@@ -49,14 +47,8 @@ class _FloorPlanView extends StatelessWidget {
     required String tableName,
   }) async {
     context.read<FloorPlanBloc>().add(const FloorPlanNavigationHandled());
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => PosPage(
-          user: user,
-          orderId: orderId,
-          tableLabel: tableName,
-        ),
-      ),
+    await context.push<void>(
+      '/pos?orderId=$orderId&tableLabel=${Uri.encodeComponent(tableName)}',
     );
     if (context.mounted) {
       context.read<FloorPlanBloc>().add(const FloorPlanRefreshRequested());
@@ -143,13 +135,8 @@ class _FloorPlanView extends StatelessWidget {
           );
         }
       case TableOperationKind.splitBill:
-        final refreshed = await Navigator.of(context).push<bool>(
-          MaterialPageRoute<bool>(
-            builder: (_) => SplitBillPage(
-              sourceOrderId: orderId,
-              tableName: snapshot.table.name,
-            ),
-          ),
+        final refreshed = await context.push<bool>(
+          '/split-bill?orderId=$orderId&tableName=${Uri.encodeComponent(snapshot.table.name)}',
         );
         if (refreshed == true && context.mounted) {
           bloc.add(const FloorPlanRefreshRequested());
@@ -189,127 +176,113 @@ class _FloorPlanView extends StatelessWidget {
       },
       builder: (context, state) {
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Plan de salle'),
-            actions: [
-              ServiceModeToggle(
-                onModeChanged: (mode) {
-                  if (mode == ServiceMode.quickService && context.mounted) {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute<void>(
-                        builder: (_) => PosPage(user: user),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TopBar(
+                title: 'Plan de salle',
+                icon: Icons.table_restaurant_outlined,
+                onHome: () => context.go('/menu'),
+                actions: [
+                  ServiceModeToggle(
+                    onModeChanged: (mode) {
+                      if (mode == ServiceMode.quickService && context.mounted) {
+                        context.go('/pos');
+                      }
+                    },
+                  ),
+                  IconButton(
+                    tooltip: 'Écran cuisine (KDS)',
+                    icon: const Icon(Icons.soup_kitchen_outlined),
+                    onPressed: () => context.go('/kds'),
+                  ),
+                  IconButton(
+                    tooltip: 'Réservations',
+                    icon: const Icon(Icons.event_seat_outlined),
+                    onPressed: () async {
+                      await context.push<void>('/backoffice/reservations');
+                      if (context.mounted) {
+                        context
+                            .read<FloorPlanBloc>()
+                            .add(const FloorPlanRefreshRequested());
+                      }
+                    },
+                  ),
+                  IconButton(
+                    tooltip: 'Comptoir (sans table)',
+                    icon: const Icon(Icons.fastfood_outlined),
+                    onPressed: () async {
+                      await context.push<void>('/pos');
+                      if (context.mounted) {
+                        context
+                            .read<FloorPlanBloc>()
+                            .add(const FloorPlanRefreshRequested());
+                      }
+                    },
+                  ),
+                  IconButton(
+                    tooltip: 'Trésorerie',
+                    icon: const Icon(Icons.account_balance_wallet_outlined),
+                    onPressed: () async {
+                      await context.push<bool>('/treasury');
+                      if (context.mounted) {
+                        context
+                            .read<FloorPlanBloc>()
+                            .add(const FloorPlanRefreshRequested());
+                      }
+                    },
+                  ),
+                  IconButton(
+                    tooltip: 'Verrouiller',
+                    icon: const Icon(Icons.lock_outline),
+                    onPressed: () {
+                      AppSession.instance.clear();
+                      context.go('/');
+                    },
+                  ),
+                ],
+              ),
+              Expanded(
+                child: switch (state) {
+                  FloorPlanLoading() || FloorPlanInitial() => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  FloorPlanError(:final message) => Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.l),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error_outline,
+                                color: scheme.error, size: 48),
+                            const SizedBox(height: AppSpacing.m),
+                            Text(message, textAlign: TextAlign.center),
+                            const SizedBox(height: AppSpacing.m),
+                            FilledButton(
+                              onPressed: () => context
+                                  .read<FloorPlanBloc>()
+                                  .add(FloorPlanStarted(user)),
+                              child: const Text('Réessayer'),
+                            ),
+                          ],
+                        ),
                       ),
-                    );
-                  }
-                },
-              ),
-              IconButton(
-                tooltip: 'Écran cuisine (KDS)',
-                icon: const Icon(Icons.soup_kitchen_outlined),
-                onPressed: () {
-                  Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(builder: (_) => const KdsPage()),
-                  );
-                },
-              ),
-              IconButton(
-                tooltip: 'Réservations',
-                icon: const Icon(Icons.event_seat_outlined),
-                onPressed: () async {
-                  await Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (_) => ReservationsPage(user: user),
                     ),
-                  );
-                  if (context.mounted) {
-                    context
-                        .read<FloorPlanBloc>()
-                        .add(const FloorPlanRefreshRequested());
-                  }
-                },
-              ),
-              IconButton(
-                tooltip: 'Comptoir (sans table)',
-                icon: const Icon(Icons.fastfood_outlined),
-                onPressed: () async {
-                  await Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (_) => PosPage(user: user),
+                  FloorPlanReady(:final zones, :final selectedZoneIndex) =>
+                    _FloorPlanBody(
+                      zones: zones,
+                      selectedZoneIndex: selectedZoneIndex,
+                      onZoneSelected: (i) => context
+                          .read<FloorPlanBloc>()
+                          .add(FloorPlanZoneSelected(i)),
+                      onTableTap: (s) => _onTableTap(context, s),
+                      onTableLongPress: (s, all) =>
+                          _onTableLongPress(context, s, all),
                     ),
-                  );
-                  if (context.mounted) {
-                    context
-                        .read<FloorPlanBloc>()
-                        .add(const FloorPlanRefreshRequested());
-                  }
-                },
-              ),
-              IconButton(
-                tooltip: 'Trésorerie',
-                icon: const Icon(Icons.account_balance_wallet_outlined),
-                onPressed: () async {
-                  await Navigator.of(context).push<bool>(
-                    MaterialPageRoute<bool>(
-                      builder: (_) => SessionHubPage(user: user),
-                    ),
-                  );
-                  if (context.mounted) {
-                    context
-                        .read<FloorPlanBloc>()
-                        .add(const FloorPlanRefreshRequested());
-                  }
-                },
-              ),
-              IconButton(
-                tooltip: 'Verrouiller',
-                icon: const Icon(Icons.lock_outline),
-                onPressed: () {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const AuthPage(),
-                    ),
-                    (_) => false,
-                  );
                 },
               ),
             ],
           ),
-          body: switch (state) {
-            FloorPlanLoading() || FloorPlanInitial() => const Center(
-                child: CircularProgressIndicator(),
-              ),
-            FloorPlanError(:final message) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.l),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.error_outline, color: scheme.error, size: 48),
-                      const SizedBox(height: AppSpacing.m),
-                      Text(message, textAlign: TextAlign.center),
-                      const SizedBox(height: AppSpacing.m),
-                      FilledButton(
-                        onPressed: () => context
-                            .read<FloorPlanBloc>()
-                            .add(FloorPlanStarted(user)),
-                        child: const Text('Réessayer'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            FloorPlanReady(:final zones, :final selectedZoneIndex) =>
-              _FloorPlanBody(
-                zones: zones,
-                selectedZoneIndex: selectedZoneIndex,
-                onZoneSelected: (i) => context
-                    .read<FloorPlanBloc>()
-                    .add(FloorPlanZoneSelected(i)),
-                onTableTap: (s) => _onTableTap(context, s),
-                onTableLongPress: (s, all) =>
-                    _onTableLongPress(context, s, all),
-              ),
-          },
         );
       },
     );
@@ -336,8 +309,6 @@ class _FloorPlanBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final zone = zones[selectedZoneIndex.clamp(0, zones.length - 1)];
     final allTables = zones.expand((z) => z.tables).toList();
 
@@ -351,18 +322,12 @@ class _FloorPlanBody extends StatelessWidget {
           ),
           child: Row(
             children: [
-              _LegendDot(
-                color: scheme.primaryContainer,
-                label: 'Libre',
-              ),
+              _LegendDot(color: AppColors.accentGreen, label: 'Libre'),
+              const SizedBox(width: AppSpacing.m),
+              _LegendDot(color: AppColors.accentOrange, label: 'Occupée'),
               const SizedBox(width: AppSpacing.m),
               _LegendDot(
-                color: scheme.errorContainer,
-                label: 'Occupée',
-              ),
-              const SizedBox(width: AppSpacing.m),
-              _LegendDot(
-                color: scheme.tertiaryContainer,
+                color: AppColors.accentPurple,
                 label: 'Réservée / Proforma',
               ),
             ],

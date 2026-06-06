@@ -51,7 +51,7 @@ jobs:
         run: dart test --reporter=expanded
         working-directory: packages/core
 
-      - name: Test network (15 tests)
+      - name: Test network (E2E mobile ↔ PC)
         run: dart test --reporter=expanded
         working-directory: packages/network
 

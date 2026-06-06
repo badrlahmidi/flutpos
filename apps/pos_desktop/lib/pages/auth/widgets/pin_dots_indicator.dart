@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../theme/app_spacing.dart';
 
@@ -17,8 +18,7 @@ class PinDotsIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     return SizedBox(
       height: AppSpacing.minTouchTarget,
@@ -26,23 +26,44 @@ class PinDotsIndicator extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(maxLength, (index) {
           final filled = index < filledCount;
+          final isLatest = filled && index == filledCount - 1;
+
+          Widget dot = AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: isLatest ? AppSpacing.m + 2 : AppSpacing.m,
+            height: isLatest ? AppSpacing.m + 2 : AppSpacing.m,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: filled ? scheme.primary : scheme.surfaceContainerHighest,
+              border: Border.all(
+                color: filled ? scheme.primary : scheme.outline,
+                width: 2,
+              ),
+              boxShadow: filled
+                  ? [
+                      BoxShadow(
+                        color: scheme.primary.withValues(alpha: 0.45),
+                        blurRadius: isLatest ? 10 : 4,
+                      ),
+                    ]
+                  : null,
+            ),
+          );
+
+          if (isLatest && !isLoading) {
+            dot = dot
+                .animate(key: ValueKey('pin-$filledCount'))
+                .scale(
+                  begin: const Offset(0.6, 0.6),
+                  end: const Offset(1, 1),
+                  duration: 250.ms,
+                  curve: Curves.elasticOut,
+                );
+          }
+
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: AppSpacing.m,
-              height: AppSpacing.m,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: filled
-                    ? scheme.primary
-                    : scheme.surfaceContainerHighest,
-                border: Border.all(
-                  color: filled ? scheme.primary : scheme.outline,
-                  width: 2,
-                ),
-              ),
-            ),
+            child: dot,
           );
         }),
       ),

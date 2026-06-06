@@ -16,12 +16,14 @@ class AutoDirectionTextField extends StatefulWidget {
     this.decoration,
     this.maxLines = 1,
     this.onChanged,
+    this.readOnly = false,
   });
 
   final TextEditingController controller;
   final InputDecoration? decoration;
   final int maxLines;
   final ValueChanged<String>? onChanged;
+  final bool readOnly;
 
   @override
   State<AutoDirectionTextField> createState() => _AutoDirectionTextFieldState();
@@ -58,6 +60,7 @@ class _AutoDirectionTextFieldState extends State<AutoDirectionTextField> {
       decoration: widget.decoration,
       maxLines: widget.maxLines,
       onChanged: widget.onChanged,
+      readOnly: widget.readOnly,
     );
   }
 }

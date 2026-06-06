@@ -27,6 +27,8 @@ class Orders extends Table {
       text().nullable().references(Users, #id)();
   IntColumn get guestCount =>
       integer().withDefault(const Constant(1))();
+  /// Instructions globales (allergies, événement, etc.).
+  TextColumn get notes => text().nullable()();
   /// Facture entreprise (scénario #34 / étape 7 Sprint 3).
   TextColumn get companyName => text().nullable()();
   TextColumn get companyIce => text().nullable()();

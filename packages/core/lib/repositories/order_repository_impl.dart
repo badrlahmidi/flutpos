@@ -249,6 +249,30 @@ class OrderRepositoryImpl implements OrderRepository {
   }
 
   @override
+  Future<Order> updateOrderNotes({
+    required String orderId,
+    required String? notes,
+  }) async {
+    final trimmed = notes?.trim();
+    final normalized = (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+
+    await (_db.update(_db.orders)..where((o) => o.id.equals(orderId))).write(
+          OrdersCompanion(
+            notes: Value(normalized),
+            updatedAt: Value(DateTime.now().toUtc()),
+          ),
+        );
+
+    final updated = await (_db.select(_db.orders)
+          ..where((o) => o.id.equals(orderId)))
+        .getSingleOrNull();
+    if (updated == null) {
+      throw StateError('Commande introuvable');
+    }
+    return updated;
+  }
+
+  @override
   Future<Order> applyDiscount({
     required String userId,
     required String orderId,
@@ -778,6 +802,7 @@ class OrderRepositoryImpl implements OrderRepository {
               orderType: orderMap['orderType'] as String,
               status: Value(orderMap['status'] as String? ?? 'OPEN'),
               guestCount: Value(orderMap['guestCount'] as int? ?? 1),
+              notes: Value(orderMap['notes'] as String?),
               createdAt: createdAt,
               updatedAt: Value(updatedAt),
             ),
@@ -789,6 +814,7 @@ class OrderRepositoryImpl implements OrderRepository {
               guestCount: Value(
                 orderMap['guestCount'] as int? ?? existing.guestCount,
               ),
+              notes: Value(orderMap['notes'] as String?),
               updatedAt: Value(updatedAt ?? DateTime.now().toUtc()),
             ),
           );

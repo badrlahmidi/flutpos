@@ -1,5 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../theme/app_spacing.dart';
 import '../molecules/product_card.dart';
@@ -42,8 +43,13 @@ class ProductsGrid extends StatelessWidget {
             price: priceFor(product),
             imageUrl: product.image,
             subtitle: product.nameAr,
+            inStock: !product.trackStock || product.currentStock > 0,
+            productType: product.productType,
             onTap: () => onProductTap(product),
-          );
+          )
+              .animate(delay: Duration(milliseconds: index * 50))
+              .fadeIn(duration: 300.ms)
+              .slideY(begin: 0.1, end: 0);
         },
         childCount: products.length,
       ),
@@ -87,8 +93,13 @@ class ProductsGrid extends StatelessWidget {
               price: priceFor(product),
               imageUrl: product.image,
               subtitle: product.nameAr,
+              inStock: !product.trackStock || product.currentStock > 0,
+              productType: product.productType,
               onTap: () => onProductTap(product),
-            );
+            )
+                .animate(delay: Duration(milliseconds: index * 50))
+                .fadeIn(duration: 300.ms)
+                .slideY(begin: 0.1, end: 0);
           },
         );
       },

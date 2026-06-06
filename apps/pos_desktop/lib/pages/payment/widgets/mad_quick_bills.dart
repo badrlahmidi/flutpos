@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
 
 /// Billets rapides MAD pour saisie accélérée.
@@ -15,10 +16,19 @@ class MadQuickBills extends StatelessWidget {
 
   static const List<double> bills = [200, 100, 50, 20, 10];
 
+  static Color _colorForBill(double bill) {
+    return switch (bill.toInt()) {
+      200 => AppColors.accentOrange,
+      100 => AppColors.accentPurple,
+      50 => AppColors.accentBlue,
+      20 => AppColors.accentGreen,
+      _ => AppColors.textMuted,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
 
     return Wrap(
       spacing: AppSpacing.s,
@@ -26,21 +36,26 @@ class MadQuickBills extends StatelessWidget {
       children: [
         for (final bill in bills)
           Material(
-            color: scheme.secondaryContainer,
-            borderRadius: BorderRadius.circular(AppSpacing.s),
+            color: _colorForBill(bill).withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(AppSpacing.s + 4),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: enabled ? () => onBillPressed(bill) : null,
-              child: SizedBox(
+              child: Container(
                 width: AppSpacing.minTouchTarget + AppSpacing.m,
                 height: AppSpacing.minTouchTarget,
-                child: Center(
-                  child: Text(
-                    '${bill.toInt()} DH',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: scheme.onSecondaryContainer,
-                      fontWeight: FontWeight.w700,
-                    ),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppSpacing.s + 4),
+                  border: Border.all(
+                    color: _colorForBill(bill).withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Text(
+                  '${bill.toInt()} DH',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: _colorForBill(bill),
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),

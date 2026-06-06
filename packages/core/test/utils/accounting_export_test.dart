@@ -1,12 +1,11 @@
 import 'package:core/core.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:intl/date_symbol_data_local.dart';
 import 'package:test/test.dart';
 
 void main() {
   setUpAll(() async {
-    await initializeDateFormatting('fr_FR');
+    await ensureAppLocaleDateFormatting();
   });
 
   group('AccountingCsvBuilder', () {

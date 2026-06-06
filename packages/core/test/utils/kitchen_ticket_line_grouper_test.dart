@@ -13,6 +13,7 @@ void main() {
       isActive: true,
       trackStock: false,
       currentStock: 0,
+      productType: 'standard',
     );
 
     OrderItem _item(String id, double qty) => OrderItem(
@@ -68,6 +69,7 @@ void main() {
       isActive: true,
       trackStock: false,
       currentStock: 0,
+      productType: 'standard',
     );
 
     final base = OrderItem(

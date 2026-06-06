@@ -20,6 +20,7 @@ class PosTopBar extends StatelessWidget {
     required this.onSettings,
     required this.onLanguageToggle,
     required this.onServiceModeChanged,
+    this.onHome,
   });
 
   final bool lanOnline;
@@ -32,6 +33,7 @@ class PosTopBar extends StatelessWidget {
   final VoidCallback onSettings;
   final VoidCallback onLanguageToggle;
   final ValueChanged<ServiceMode> onServiceModeChanged;
+  final VoidCallback? onHome;
 
   @override
   Widget build(BuildContext context) {
@@ -45,10 +47,16 @@ class PosTopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
+          if (onHome != null)
+            IconButton(
+              tooltip: 'Menu principal',
+              onPressed: onHome,
+              icon: Icon(Icons.home_outlined, color: PosDesignTokens.primaryBlue),
+            ),
           const Icon(Icons.storefront, color: PosDesignTokens.primaryBlue, size: 28),
           const SizedBox(width: 10),
           const Text(
-            'Ritaj POS',
+            'RITAGESTION POS',
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
           ),
           const SizedBox(width: 12),

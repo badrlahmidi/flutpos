@@ -1,5 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -190,6 +191,34 @@ void main() {
       ],
       verify: (_) {
         verify(() => orderRepo.fireNextPendingCourse('order-1')).called(1);
+      },
+    );
+
+    blocTest<CartBloc, CartState>(
+      'persiste la note sur CartOrderNotesChanged',
+      build: () {
+        when(() => orderRepo.updateOrderNotes(
+              orderId: any(named: 'orderId'),
+              notes: any(named: 'notes'),
+            )).thenAnswer(
+          (_) async => testOrder().copyWith(notes: const Value('Sans gluten')),
+        );
+        return CartBloc(
+          orderRepository: orderRepo,
+          cashSessionRepository: cashRepo,
+        );
+      },
+      act: (bloc) async {
+        bloc.add(CartStarted(testUser));
+        await Future.delayed(const Duration(milliseconds: 50));
+        bloc.add(const CartOrderNotesChanged('Sans gluten'));
+      },
+      wait: const Duration(milliseconds: 200),
+      verify: (_) {
+        verify(() => orderRepo.updateOrderNotes(
+              orderId: 'order-1',
+              notes: 'Sans gluten',
+            )).called(1);
       },
     );
   });

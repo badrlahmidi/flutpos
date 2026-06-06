@@ -22,6 +22,8 @@ class Products extends Table {
       boolean().withDefault(const Constant(false))();
   RealColumn get currentStock =>
       real().withDefault(const Constant(0))();
+  TextColumn get productType =>
+      text().withDefault(const Constant('standard'))();
   IntColumn get sortOrder =>
       integer().withDefault(const Constant(0))();
   BoolColumn get isActive =>

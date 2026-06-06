@@ -8,6 +8,7 @@ class Categories extends Table {
   TextColumn get name => text()();
   TextColumn get nameAr => text().nullable()();
   TextColumn get image => text().nullable()();
+  TextColumn get colorHex => text().nullable()();
   TextColumn get printStationId =>
       text().nullable().references(PrintStations, #id)();
   IntColumn get sortOrder =>
