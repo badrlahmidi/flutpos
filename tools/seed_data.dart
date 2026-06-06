@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:core/database/app_database.dart';
 import 'package:core/database/database_connection.dart';
 import 'package:core/database/seed/database_seeder.dart';
 import 'package:path/path.dart' as p;

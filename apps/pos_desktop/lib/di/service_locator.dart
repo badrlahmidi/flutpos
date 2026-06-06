@@ -82,6 +82,10 @@ void configureDependencies(AppDatabase database) {
     () => CashSessionRepositoryImpl(sl<AppDatabase>(), sl<AuditRepository>()),
   );
 
+  sl.registerLazySingleton<VoucherRepository>(
+    () => VoucherRepositoryImpl(sl<AppDatabase>()),
+  );
+
   sl.registerLazySingleton<PrintRepository>(
     () => PrintRepositoryImpl(sl<AppDatabase>()),
   );

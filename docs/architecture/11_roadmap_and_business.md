@@ -100,7 +100,7 @@ Fondations   Caisse MVP   Réseau LAN   Trésorerie   Salle avancé  Cloud & Saa
   - % ou montant fixe sur le ticket global
   - Void par article avec PIN manager + raison
   - Mode paiement repas employé (encaissement)
-- [ ] **Vouchers :** Saisie code promo ou scan QR
+- [x] **Vouchers :** Saisie code promo ou scan QR
 - [x] **X-Report** (brouillard de caisse, consultation sans clôturer)
 - [x] **Z-Report** (clôture définitive avec écart justifié)
 - [x] **AuditTrail :** Log de chaque action sensible
@@ -114,7 +114,7 @@ Fondations   Caisse MVP   Réseau LAN   Trésorerie   Salle avancé  Cloud & Saa
 
 ## Sprint 4 — Gestion de Salle Avancée (Semaines 8-9) ✅*
 
-> Détail : [`SPRINT_STATUS.md`](SPRINT_STATUS.md) · Audit : [`FINAL_AUDIT.md`](FINAL_AUDIT.md) · Prompt : [`SPRINT4_ADVANCED_FLOOR_PROMPT.md`](SPRINT4_ADVANCED_FLOOR_PROMPT.md)
+> Détail : [`SPRINT_STATUS.md`](SPRINT_STATUS.md) · Audit : [`audit_analysis.md`](../../audit_analysis.md) · Prompt : [`SPRINT4_ADVANCED_FLOOR_PROMPT.md`](SPRINT4_ADVANCED_FLOOR_PROMPT.md)
 
 ### Objectifs
 - [x] **Plan de salle visuel** : Grille par zone avec tables colorées selon statut
@@ -140,7 +140,7 @@ Fondations   Caisse MVP   Réseau LAN   Trésorerie   Salle avancé  Cloud & Saa
 
 ## Sprint 5 — Cloud, Multi-tenant & Analytics (Semaines 10-12) ✅*
 
-> Détail : [`SPRINT_STATUS.md`](SPRINT_STATUS.md) · Audit : [`FINAL_AUDIT.md`](FINAL_AUDIT.md) · Prompt : [`SPRINT5_CLOUD_SAAS_PROMPT.md`](SPRINT5_CLOUD_SAAS_PROMPT.md)
+> Détail : [`SPRINT_STATUS.md`](SPRINT_STATUS.md) · Audit : [`audit_analysis.md`](../../audit_analysis.md) · Prompt : [`SPRINT5_CLOUD_SAAS_PROMPT.md`](SPRINT5_CLOUD_SAAS_PROMPT.md)
 
 ### Objectifs
 - [x] **PowerSync + Supabase :** Schema, connector, config env (OFF par défaut)

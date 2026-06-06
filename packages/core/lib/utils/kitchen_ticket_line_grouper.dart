@@ -18,18 +18,22 @@ abstract final class KitchenTicketLineGrouper {
       if (existing == null) {
         buckets[key] = GroupedKitchenLine(
           productName: line.product.name,
+          productNameAr: line.product.nameAr,
           quantity: line.orderItem.quantity,
-          modifierSummary: line.modifierSummary,
+          modifierSummary: line.modifierSummaryBilingual,
           customNotes: line.orderItem.customNotes,
           sourceItemIds: [line.orderItem.id],
+          courseNumber: line.orderItem.courseNumber,
         );
       } else {
         buckets[key] = GroupedKitchenLine(
           productName: existing.productName,
+          productNameAr: existing.productNameAr,
           quantity: existing.quantity + line.orderItem.quantity,
           modifierSummary: existing.modifierSummary,
           customNotes: existing.customNotes,
           sourceItemIds: [...existing.sourceItemIds, line.orderItem.id],
+          courseNumber: existing.courseNumber,
         );
       }
     }
@@ -43,6 +47,6 @@ abstract final class KitchenTicketLineGrouper {
         .toList()
       ..sort();
     final notes = line.orderItem.customNotes ?? '';
-    return '${line.product.id}|${modIds.join(',')}|$notes';
+    return '${line.product.id}|${modIds.join(',')}|$notes|${line.orderItem.courseNumber}';
   }
 }

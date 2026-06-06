@@ -92,4 +92,39 @@ class ProductRepositoryImpl implements ProductRepository {
     }
     return result;
   }
+
+  @override
+  Future<List<Product>> listAllActiveProducts() {
+    return (_db.select(_db.products)
+          ..where((p) => p.isActive.equals(true))
+          ..orderBy([(p) => OrderingTerm.asc(p.sortOrder)]))
+        .get();
+  }
+
+  @override
+  Future<void> updateProductNameAr({
+    required String productId,
+    String? nameAr,
+  }) async {
+    await (_db.update(_db.products)..where((p) => p.id.equals(productId)))
+        .write(ProductsCompanion(nameAr: Value(nameAr)));
+  }
+
+  @override
+  Future<List<ModifierOption>> listAllModifierOptions() {
+    return (_db.select(_db.modifierOptions)
+          ..where((o) => o.isActive.equals(true))
+          ..orderBy([(o) => OrderingTerm.asc(o.sortOrder)]))
+        .get();
+  }
+
+  @override
+  Future<void> updateModifierOptionNameAr({
+    required String optionId,
+    String? nameAr,
+  }) async {
+    await (_db.update(_db.modifierOptions)
+          ..where((o) => o.id.equals(optionId)))
+        .write(ModifierOptionsCompanion(nameAr: Value(nameAr)));
+  }
 }

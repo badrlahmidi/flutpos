@@ -5,8 +5,11 @@ import 'payment_event.dart';
 import 'payment_state.dart';
 
 class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
-  PaymentBloc({required OrderRepository orderRepository})
-      : _orderRepository = orderRepository,
+  PaymentBloc({
+    required OrderRepository orderRepository,
+    required VoucherRepository voucherRepository,
+  })  : _orderRepository = orderRepository,
+        _voucherRepository = voucherRepository,
         super(const PaymentInitial()) {
     on<PaymentStarted>(_onStarted);
     on<PaymentDigitEntered>(_onDigitEntered);
@@ -18,9 +21,11 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     on<PaymentSplitModeToggled>(_onSplitToggled);
     on<PaymentCashDrawerHandled>(_onCashDrawerHandled);
     on<PaymentDiscountApplied>(_onDiscountApplied);
+    on<PaymentVoucherScanned>(_onVoucherScanned);
   }
 
   final OrderRepository _orderRepository;
+  final VoucherRepository _voucherRepository;
 
   Future<void> _onStarted(
     PaymentStarted event,
@@ -335,6 +340,49 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
       return rounded.toInt().toString();
     }
     return rounded.toStringAsFixed(2);
+  }
+  Future<void> _onVoucherScanned(
+    PaymentVoucherScanned event,
+    Emitter<PaymentState> emit,
+  ) async {
+    final current = state;
+    if (current is! PaymentReady) return;
+
+    emit(current.copyWith(isProcessing: true, errorMessage: null));
+
+    try {
+      final voucher = await _voucherRepository.validateAndUseVoucher(
+        code: event.voucherCode,
+        orderId: current.order.order.id,
+      );
+
+      final amountToApply = voucher.amount > current.remainingToPay
+          ? current.remainingToPay
+          : voucher.amount;
+
+      await _orderRepository.addPayment(
+        orderId: current.order.order.id,
+        method: PaymentMethod.voucher,
+        amount: roundMoney(amountToApply),
+      );
+
+      await _orderRepository.finalizeOrderIfFullyPaid(current.order.order.id);
+      await _reload(
+        emit,
+        current.order.order.id,
+        clearEntry: true,
+      );
+    } catch (e) {
+      final ready = state;
+      if (ready is PaymentReady) {
+        emit(
+          ready.copyWith(
+            isProcessing: false,
+            errorMessage: e.toString(),
+          ),
+        );
+      }
+    }
   }
 }
 

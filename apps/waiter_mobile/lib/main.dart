@@ -1,26 +1,10 @@
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const WaiterMobileApp());
-}
+import 'app.dart';
+import 'di/app_bootstrap.dart';
 
-class WaiterMobileApp extends StatelessWidget {
-  const WaiterMobileApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ritagestion — Serveur',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        useMaterial3: true,
-      ),
-      home: const Scaffold(
-        body: Center(
-          child: Text('Ritagestion Waiter — Sprint 0'),
-        ),
-      ),
-    );
-  }
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppBootstrap.instance.initialize();
+  runApp(const WaiterApp());
 }

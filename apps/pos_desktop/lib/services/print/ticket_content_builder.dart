@@ -32,6 +32,10 @@ abstract final class TicketContentBuilder {
 
     bool groupIdenticalLines = false,
 
+    int? firedCourseNumber,
+
+    bool isCourseClaim = false,
+
   }) {
 
     if (lines.isEmpty) {
@@ -62,6 +66,12 @@ abstract final class TicketContentBuilder {
 
       'Serveur: ${order.waiter.name}',
 
+      if (isCourseClaim && firedCourseNumber != null)
+        '*** RECLAME — ${CourseHelpers.labelForCourse(firedCourseNumber).toUpperCase()} ***',
+
+      if (firedCourseNumber != null)
+        'Course: ${CourseHelpers.badgeLabel(firedCourseNumber)}',
+
       if (groupIdenticalLines) 'Mode: synthese bar',
 
       '--------------------------------',
@@ -76,7 +86,11 @@ abstract final class TicketContentBuilder {
 
         final qty = _formatQty(grouped.quantity);
 
-        buffer.add('$qty x ${grouped.productName}');
+        final label = KitchenBilingualLabel.productLine(
+          name: grouped.productName,
+          nameAr: grouped.productNameAr,
+        );
+        buffer.add('$qty x $label');
 
         if (grouped.modifierSummary.isNotEmpty) {
 
@@ -98,11 +112,15 @@ abstract final class TicketContentBuilder {
 
         final qty = _formatQty(line.orderItem.quantity);
 
-        buffer.add('$qty x ${line.product.name}');
+        final label = KitchenBilingualLabel.productLine(
+          name: line.product.name,
+          nameAr: line.product.nameAr,
+        );
+        buffer.add('$qty x $label');
 
-        if (line.modifierSummary.isNotEmpty) {
+        if (line.modifierSummaryBilingual.isNotEmpty) {
 
-          buffer.add('   > ${line.modifierSummary}');
+          buffer.add('   > ${line.modifierSummaryBilingual}');
 
         }
 
@@ -180,11 +198,15 @@ abstract final class TicketContentBuilder {
 
       final qty = _formatQty(line.orderItem.quantity);
 
-      buffer.add('-$qty x ${line.product.name}');
+      final label = KitchenBilingualLabel.productLine(
+        name: line.product.name,
+        nameAr: line.product.nameAr,
+      );
+      buffer.add('-$qty x $label');
 
-      if (line.modifierSummary.isNotEmpty) {
+      if (line.modifierSummaryBilingual.isNotEmpty) {
 
-        buffer.add('   > ${line.modifierSummary}');
+        buffer.add('   > ${line.modifierSummaryBilingual}');
 
       }
 

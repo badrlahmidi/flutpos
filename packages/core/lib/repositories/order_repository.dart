@@ -1,5 +1,6 @@
 import '../database/app_database.dart';
 import '../entities/complete_order.dart';
+import '../entities/fire_course_result.dart';
 import '../enums/discount_type.dart';
 import '../enums/order_source.dart';
 import '../enums/order_type.dart';
@@ -24,6 +25,7 @@ abstract class OrderRepository {
     int guestCount = 1,
     OrderSource source = OrderSource.manual,
     String? externalRef,
+    String? orderId,
   });
 
   /// Commande livraison (sans table, type [DELIVERY], tarifs livraison).
@@ -43,7 +45,18 @@ abstract class OrderRepository {
     required OrderType orderType,
     double quantity = 1,
     String? customNotes,
+    int courseNumber = 1,
+    String? orderItemId,
   });
+
+  /// Réplique fidèle (mêmes IDs) d'une commande reçue du PC.
+  Future<CompleteOrder?> mirrorOrderSnapshot({
+    required String localSessionId,
+    required Map<String, dynamic> snapshot,
+  });
+
+  /// Supprime le ticket local ouvert sur une table (PC sans commande).
+  Future<void> clearLocalOpenOrderForTable(String tableId);
 
   Future<OrderItemModifier> addOrderItemModifier({
     required String orderItemId,
@@ -61,6 +74,24 @@ abstract class OrderRepository {
 
   /// Marque des lignes comme envoyées en cuisine (`isFired`).
   Future<void> markOrderItemsFired(Iterable<String> orderItemIds);
+
+  /// Change la course d'une ligne non encore envoyée en cuisine.
+  Future<OrderItem> updateOrderItemCourse({
+    required String orderItemId,
+    required int courseNumber,
+  });
+
+  /// Numéros de course ayant au moins une ligne non envoyée (`isFired == false`).
+  Future<List<int>> listPendingCourseNumbers(String orderId);
+
+  /// Envoie en cuisine toutes les lignes d'une course (`isFired = true`).
+  Future<FireCourseResult> fireCourse({
+    required String orderId,
+    required int courseNumber,
+  });
+
+  /// Envoie la prochaine course en attente (numéro minimal non fired).
+  Future<FireCourseResult?> fireNextPendingCourse(String orderId);
 
   /// Remise globale — audit `APPLY_DISCOUNT` **avant** mise à jour.
   Future<Order> applyDiscount({
@@ -125,6 +156,7 @@ abstract class OrderRepository {
     required String waiterId,
     required String tableId,
     int guestCount = 1,
+    String? orderId,
   });
 
   /// Transfère un ticket vers une autre table (libère l'ancienne).

@@ -16,25 +16,22 @@ import '../../di/service_locator.dart';
 import '../../platform/desktop_window.dart';
 import '../payment/payment_page.dart';
 import '../../services/print/pos_print_service.dart';
-import '../../services/pos_service_mode.dart';
 import '../../theme/app_spacing.dart';
-import '../../widgets/molecules/service_mode_toggle.dart';
+import '../../theme/pos_design_tokens.dart';
+import '../../widgets/organisms/pos_catalog_toolbar.dart';
+import '../../widgets/organisms/pos_top_bar.dart';
 import '../../utils/discount_flow.dart';
 import '../../utils/manager_auth.dart';
 import '../../widgets/dialogs/void_item_dialog.dart';
 import '../../widgets/widgets.dart';
 import '../auth/auth_page.dart';
 import '../floor_plan/floor_plan_page.dart';
-import '../kds/kds_page.dart';
 import '../session/session_hub_page.dart';
 import '../backoffice/analytics_dashboard_page.dart';
 import 'delivery/delivery_orders_panel.dart';
-import 'delivery/delivery_start_dialog.dart';
 import 'modifiers/modifier_selection_dialog.dart';
 
-enum _PosWorkspace { register, deliveries }
-
-/// Écran caisse principal — 3 colonnes (20 % / 50 % / 30 %).
+/// Écran caisse principal — layout maquette Ritaj POS.
 class PosPage extends StatelessWidget {
   const PosPage({
     super.key,
@@ -86,9 +83,13 @@ class _PosView extends StatefulWidget {
 class _PosViewState extends State<_PosView> with WindowListener {
   final _orderRepository = sl<OrderRepository>();
   final _productRepository = sl<ProductRepository>();
+  final _searchController = TextEditingController();
 
   final Set<String> _printedKitchenItemIds = {};
-  _PosWorkspace _workspace = _PosWorkspace.register;
+  final Set<String> _favoriteProductIds = {};
+  PosWorkspace _workspace = PosWorkspace.register;
+  PosProductFilter _productFilter = PosProductFilter.all;
+  Map<String, int> _categoryCounts = {};
 
   @override
   void initState() {
@@ -96,10 +97,48 @@ class _PosViewState extends State<_PosView> with WindowListener {
     if (DesktopWindow.isKioskTarget) {
       windowManager.addListener(this);
     }
+    _loadCategoryCounts();
+    _searchController.addListener(() => setState(() {}));
+  }
+
+  Future<void> _loadCategoryCounts() async {
+    final categories = await _productRepository.getActiveCategories();
+    final counts = <String, int>{};
+    for (final cat in categories) {
+      counts[cat.id] =
+          (await _productRepository.getProductsByCategory(cat.id)).length;
+    }
+    if (mounted) {
+      setState(() => _categoryCounts = counts);
+    }
+  }
+
+  List<Product> _filterProducts(List<Product> products) {
+    final query = _searchController.text.trim().toLowerCase();
+    var list = products;
+    if (query.isNotEmpty) {
+      list = list
+          .where(
+            (p) =>
+                p.name.toLowerCase().contains(query) ||
+                (p.nameAr?.toLowerCase().contains(query) ?? false),
+          )
+          .toList();
+    }
+    switch (_productFilter) {
+      case PosProductFilter.all:
+      case PosProductFilter.available:
+        return list;
+      case PosProductFilter.popular:
+        return list.take(12).toList();
+      case PosProductFilter.favorites:
+        return list.where((p) => _favoriteProductIds.contains(p.id)).toList();
+    }
   }
 
   @override
   void dispose() {
+    _searchController.dispose();
     if (DesktopWindow.isKioskTarget) {
       windowManager.removeListener(this);
     }
@@ -152,7 +191,8 @@ class _PosViewState extends State<_PosView> with WindowListener {
       context.read<CartBloc>().add(
             CartItemAddedWithModifiers(
               product: product,
-              options: selected,
+              options: selected.options,
+              customNotes: selected.customNotes,
             ),
           );
       return;
@@ -205,7 +245,7 @@ class _PosViewState extends State<_PosView> with WindowListener {
             externalRef: externalRef,
           ),
         );
-    setState(() => _workspace = _PosWorkspace.deliveries);
+    setState(() => _workspace = PosWorkspace.deliveries);
   }
 
   Future<void> _openDeliveryOrder(String orderId) async {
@@ -219,7 +259,7 @@ class _PosViewState extends State<_PosView> with WindowListener {
             existingOrderId: orderId,
           ),
         );
-    setState(() => _workspace = _PosWorkspace.deliveries);
+    setState(() => _workspace = PosWorkspace.deliveries);
   }
 
   void _onServiceModeChanged(ServiceMode mode) {
@@ -239,61 +279,28 @@ class _PosViewState extends State<_PosView> with WindowListener {
     );
   }
 
-  void _printKitchenLines(CompleteOrder order, List<OrderItemWithProduct> lines) {
+  void _onFireCourseResult(BuildContext context, CartState state) {
+    if (state is! CartReady || state.fireCourseResult == null) {
+      return;
+    }
+    final result = state.fireCourseResult!;
+    final order = state.order;
+    final firedIds = result.firedItems.map((i) => i.id).toSet();
+    final lines = order.activeItems
+        .where((l) => firedIds.contains(l.orderItem.id))
+        .toList();
     if (lines.isEmpty) {
       return;
     }
-    sl<PosPrintService>().printKitchenTickets(order: order, lines: lines);
-  }
-
-  Future<void> _markAndPrintKitchen(
-    CompleteOrder order,
-    List<OrderItemWithProduct> lines,
-  ) async {
-    if (lines.isEmpty) {
-      return;
-    }
-    final ids = lines.map((l) => l.orderItem.id).toList();
-    await sl<OrderRepository>().markOrderItemsFired(ids);
-    _printedKitchenItemIds.addAll(ids);
-    _printKitchenLines(order, lines);
-  }
-
-  void _onCartStateChanged(BuildContext context, CartState state) {
-    if (state is CartError) {
-      if (state.message.contains('session')) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(state.message),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-      return;
-    }
-
-    if (state is CartReady) {
-      final newLines = state.order.activeItems
-          .where(
-            (l) =>
-                !l.orderItem.isFired &&
-                !_printedKitchenItemIds.contains(l.orderItem.id),
-          )
-          .toList();
-      if (newLines.isEmpty) {
-        return;
-      }
-      unawaited(_markAndPrintKitchen(state.order, newLines));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Ticket cuisine envoyé (${newLines.length} ligne(s))',
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
+    _printedKitchenItemIds.addAll(firedIds);
+    unawaited(
+      sl<PosPrintService>().printKitchenTickets(
+        order: order,
+        lines: lines,
+        firedCourseNumber: result.courseNumber,
+        isCourseClaim: result.courseNumber > 1,
+      ),
+    );
   }
 
   Future<void> _onProforma(CompleteOrder order) async {
@@ -370,7 +377,7 @@ class _PosViewState extends State<_PosView> with WindowListener {
     }
 
     context.read<CartBloc>().add(const CartReloadRequested());
-    setState(() => _workspace = _PosWorkspace.register);
+    setState(() => _workspace = PosWorkspace.register);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -381,23 +388,11 @@ class _PosViewState extends State<_PosView> with WindowListener {
   }
 
   Future<void> _onSendToKitchen(CompleteOrder order) async {
-    final lines = order.activeItems
-        .where((l) => !l.orderItem.isFired)
-        .toList();
-    await _markAndPrintKitchen(order, lines);
-    if (!mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          lines.isEmpty
-              ? 'Aucune ligne à envoyer'
-              : 'Cuisine — ${lines.length} ligne(s)',
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    context.read<CartBloc>().add(const CartCourseFireRequested());
+  }
+
+  void _onClaimNextCourse() {
+    context.read<CartBloc>().add(const CartCourseFireRequested());
   }
 
   Future<void> _onDiscount(CompleteOrder order) async {
@@ -475,8 +470,6 @@ class _PosViewState extends State<_PosView> with WindowListener {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final server = AppBootstrap.instance.networkServer;
 
     return BlocListener<CartBloc, CartState>(
@@ -512,40 +505,41 @@ class _PosViewState extends State<_PosView> with WindowListener {
           }
         },
         child: BlocListener<CartBloc, CartState>(
-        listener: _onCartStateChanged,
+        listenWhen: (prev, curr) =>
+            curr is CartReady &&
+            curr.fireCourseResult != null &&
+            (prev is! CartReady ||
+                prev.fireCourseResult?.courseNumber !=
+                    curr.fireCourseResult?.courseNumber),
+        listener: _onFireCourseResult,
         child: Scaffold(
+        backgroundColor: PosDesignTokens.shellBackground,
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _PosTopBar(
-              restaurantName: 'Ritagestion',
-              cashierName: widget.user.name,
-              tableLabel: widget.tableLabel,
-              workspace: _workspace,
+            PosTopBar(
               lanOnline: server.isRunning,
               clientCount: server.clientRegistry.count,
-              onWorkspaceChanged: (w) => setState(() => _workspace = w),
-              onNewDelivery: () async {
-                final data = await showDeliveryStartDialog(context);
-                if (data != null && mounted) {
-                  await _startDeliveryOrder(data.source, data.externalRef);
+              workspace: _workspace,
+              onWorkspaceSelected: (w) => setState(() => _workspace = w),
+              onSync: () {
+                context.read<CatalogBloc>().add(const CatalogStarted());
+                _loadCategoryCounts();
+              },
+              onPrint: () {
+                final order = context.read<CartBloc>().state.orderOrNull;
+                if (order != null) {
+                  _onProforma(order);
                 }
               },
-              onFloorPlan: () {
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (_) => FloorPlanPage(user: widget.user),
-                  ),
+              onHistory: _openTreasury,
+              onSettings: _openDashboard,
+              onLanguageToggle: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Basculer AR — catalogue bilingue actif')),
                 );
               },
-              onTreasury: _openTreasury,
-              onDashboard: _openDashboard,
               onServiceModeChanged: _onServiceModeChanged,
-              onKds: () {
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(builder: (_) => const KdsPage()),
-                );
-              },
             ),
             Expanded(
               child: BlocBuilder<CatalogBloc, CatalogState>(
@@ -570,69 +564,100 @@ class _PosViewState extends State<_PosView> with WindowListener {
                       return Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          flex: 2,
-                          child: _workspace == _PosWorkspace.deliveries
+                        SizedBox(
+                          width: 240,
+                          child: _workspace == PosWorkspace.deliveries
                               ? DeliveryOrdersPanel(
                                   cashierId: widget.user.id,
                                   selectedOrderId: currentOrder?.order.id,
                                   onOrderSelected: _openDeliveryOrder,
                                   onNewDelivery: _startDeliveryOrder,
                                 )
-                              : ColoredBox(
-                                  color: scheme.surface,
-                                  child: CategoryBar(
-                                    categories: catalog.categories,
-                                    selectedCategoryId:
-                                        catalog.selectedCategoryId,
-                                    onCategorySelected: _onCategorySelected,
-                                  ),
+                              : CategoryBar(
+                                  categories: catalog.categories,
+                                  selectedCategoryId:
+                                      catalog.selectedCategoryId,
+                                  productCounts: _categoryCounts,
+                                  onCategorySelected: _onCategorySelected,
+                                  onShowAllCategories: catalog.categories.isNotEmpty
+                                      ? () => _onCategorySelected(
+                                            catalog.categories.first,
+                                          )
+                                      : null,
                                 ),
                         ),
-                        VerticalDivider(
-                          width: 1,
-                          color: scheme.outlineVariant,
-                        ),
                         Expanded(
-                          flex: 5,
                           child: ColoredBox(
-                            color: theme.scaffoldBackgroundColor,
-                            child: BlocBuilder<CartBloc, CartState>(
-                              buildWhen: (prev, curr) =>
-                                  prev.orderTypeOrDefault !=
-                                  curr.orderTypeOrDefault,
-                              builder: (context, cartState) {
-                                if (catalog.isLoadingProducts) {
-                                  return const Center(
-                                    child: CircularProgressIndicator(),
-                                  );
-                                }
-                                return ProductsGrid(
-                                  products: catalog.products,
-                                  priceFor: (p) => _orderRepository
-                                      .resolveUnitPrice(
-                                    p,
-                                    cartState.orderTypeOrDefault,
+                            color: PosDesignTokens.shellBackground,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (_workspace == PosWorkspace.register)
+                                  PosCatalogToolbar(
+                                    searchController: _searchController,
+                                    filter: _productFilter,
+                                    onFilterChanged: (f) =>
+                                        setState(() => _productFilter = f),
+                                    onSort: () {},
                                   ),
-                                  onProductTap: _onProductTap,
-                                );
-                              },
+                                Expanded(
+                                  child: BlocBuilder<CartBloc, CartState>(
+                                    buildWhen: (prev, curr) =>
+                                        prev.orderTypeOrDefault !=
+                                        curr.orderTypeOrDefault,
+                                    builder: (context, cartState) {
+                                      if (catalog.isLoadingProducts) {
+                                        return const Center(
+                                          child: CircularProgressIndicator(),
+                                        );
+                                      }
+                                      final filtered =
+                                          _filterProducts(catalog.products);
+                                      return ProductsGrid(
+                                        products: filtered,
+                                        priceFor: (p) => _orderRepository
+                                            .resolveUnitPrice(
+                                          p,
+                                          cartState.orderTypeOrDefault,
+                                        ),
+                                        onProductTap: _onProductTap,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        VerticalDivider(
-                          width: 1,
-                          color: scheme.outlineVariant,
-                        ),
-                        Expanded(
-                          flex: 3,
+                        SizedBox(
+                          width: 380,
                           child: CartPanel(
+                                tableLabel: widget.tableLabel != null
+                                    ? 'Table ${widget.tableLabel}'
+                                    : null,
                                 user: widget.user,
                                 isOrderLocked: cartState.isOrderLocked,
                                 isProforma: cartState.isProforma,
                                 isDeliveryOrder: cartState.isDeliveryOrder,
                                 deliveryLabel: cartState.deliveryDisplayLabel,
                                 orderType: cartState.orderTypeOrDefault,
+                                activeCourseNumber: cartState is CartReady
+                                    ? cartState.activeCourseNumber
+                                    : 1,
+                                canClaimNextCourse: cartState is CartReady
+                                    ? cartState.canClaimNextCourse
+                                    : false,
+                                onActiveCourseSelected: (course) => context
+                                    .read<CartBloc>()
+                                    .add(CartActiveCourseSelected(course)),
+                                onItemCourseChanged: (line, course) => context
+                                    .read<CartBloc>()
+                                    .add(
+                                      CartItemCourseChanged(
+                                        orderItemId: line.orderItem.id,
+                                        courseNumber: course,
+                                      ),
+                                    ),
                                 onOrderTypeChanged: (type) => context
                                     .read<CartBloc>()
                                     .add(CartOrderTypeChanged(type)),
@@ -670,6 +695,9 @@ class _PosViewState extends State<_PosView> with WindowListener {
                                 onSendToKitchen: currentOrder == null
                                     ? null
                                     : () => _onSendToKitchen(currentOrder),
+                                onClaimNextCourse: currentOrder == null
+                                    ? null
+                                    : _onClaimNextCourse,
                                 onProforma: currentOrder == null
                                     ? null
                                     : () => _onProforma(currentOrder),
@@ -689,135 +717,6 @@ class _PosViewState extends State<_PosView> with WindowListener {
         ),
       ),
       ),
-      ),
-    );
-  }
-}
-
-class _PosTopBar extends StatelessWidget {
-  const _PosTopBar({
-    required this.restaurantName,
-    required this.cashierName,
-    this.tableLabel,
-    required this.workspace,
-    required this.lanOnline,
-    required this.clientCount,
-    required this.onWorkspaceChanged,
-    required this.onNewDelivery,
-    required this.onFloorPlan,
-    required this.onTreasury,
-    required this.onDashboard,
-    required this.onServiceModeChanged,
-    required this.onKds,
-  });
-
-  final String restaurantName;
-  final String cashierName;
-  final String? tableLabel;
-  final _PosWorkspace workspace;
-  final bool lanOnline;
-  final int clientCount;
-  final ValueChanged<_PosWorkspace> onWorkspaceChanged;
-  final VoidCallback onNewDelivery;
-  final VoidCallback onFloorPlan;
-  final VoidCallback onTreasury;
-  final VoidCallback onDashboard;
-  final ValueChanged<ServiceMode> onServiceModeChanged;
-  final VoidCallback onKds;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final statusColor = lanOnline ? scheme.primary : scheme.error;
-
-    return Material(
-      color: scheme.surface,
-      elevation: 1,
-      child: SizedBox(
-        height: AppSpacing.minTouchTarget,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
-          child: Row(
-            children: [
-              Icon(Icons.storefront, color: scheme.primary),
-              const SizedBox(width: AppSpacing.s),
-              Text(restaurantName, style: theme.textTheme.titleMedium),
-              const SizedBox(width: AppSpacing.m),
-              Text(
-                cashierName,
-                style: theme.textTheme.labelLarge,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (tableLabel != null) ...[
-                const SizedBox(width: AppSpacing.m),
-                Chip(
-                  label: Text('Table $tableLabel'),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-              const Spacer(),
-              ServiceModeToggle(onModeChanged: onServiceModeChanged),
-              const SizedBox(width: AppSpacing.s),
-              SizedBox(
-                height: AppSpacing.minTouchTarget,
-                child: SegmentedButton<_PosWorkspace>(
-                  segments: const [
-                    ButtonSegment(
-                      value: _PosWorkspace.register,
-                      label: Text('Caisse'),
-                      icon: Icon(Icons.point_of_sale),
-                    ),
-                    ButtonSegment(
-                      value: _PosWorkspace.deliveries,
-                      label: Text('Livraisons'),
-                      icon: Icon(Icons.delivery_dining),
-                    ),
-                  ],
-                  selected: {workspace},
-                  onSelectionChanged: (set) {
-                    if (set.isNotEmpty) {
-                      onWorkspaceChanged(set.first);
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s),
-              IconButton(
-                tooltip: 'Écran cuisine (KDS)',
-                onPressed: onKds,
-                icon: const Icon(Icons.soup_kitchen_outlined),
-              ),
-              IconButton(
-                tooltip: 'Nouvelle livraison',
-                onPressed: onNewDelivery,
-                icon: const Icon(Icons.add_box_outlined),
-              ),
-              if (PosServiceMode.instance.isTableService)
-                IconButton(
-                  tooltip: 'Plan de salle',
-                  onPressed: onFloorPlan,
-                  icon: const Icon(Icons.table_restaurant_outlined),
-                ),
-              IconButton(
-                tooltip: 'Dashboard analytique',
-                onPressed: onDashboard,
-                icon: const Icon(Icons.insights_outlined),
-              ),
-              IconButton(
-                tooltip: 'Trésorerie (X / Z / Pay-in-out)',
-                onPressed: onTreasury,
-                icon: const Icon(Icons.account_balance_wallet_outlined),
-              ),
-              Icon(Icons.lan, size: 20, color: statusColor),
-              const SizedBox(width: AppSpacing.s),
-              Text(
-                lanOnline ? 'LAN · $clientCount' : 'LAN hors ligne',
-                style: theme.textTheme.labelSmall?.copyWith(color: statusColor),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

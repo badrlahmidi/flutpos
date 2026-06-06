@@ -47,12 +47,13 @@ final class CartOrderTypeChanged extends CartEvent {
 }
 
 final class CartItemAdded extends CartEvent {
-  const CartItemAdded(this.product);
+  const CartItemAdded(this.product, {this.courseNumber});
 
   final Product product;
+  final int? courseNumber;
 
   @override
-  List<Object?> get props => [product.id];
+  List<Object?> get props => [product.id, courseNumber];
 }
 
 /// Ajout avec modificateurs (nouvelle ligne, pas de fusion).
@@ -60,13 +61,22 @@ final class CartItemAddedWithModifiers extends CartEvent {
   const CartItemAddedWithModifiers({
     required this.product,
     required this.options,
+    this.courseNumber,
+    this.customNotes,
   });
 
   final Product product;
   final List<ModifierOption> options;
+  final int? courseNumber;
+  final String? customNotes;
 
   @override
-  List<Object?> get props => [product.id, options.map((o) => o.id).toList()];
+  List<Object?> get props => [
+        product.id,
+        options.map((o) => o.id).toList(),
+        courseNumber,
+        customNotes,
+      ];
 }
 
 final class CartItemRemoved extends CartEvent {
@@ -160,4 +170,33 @@ final class CartItemModifierAdded extends CartEvent {
 
   @override
   List<Object?> get props => [orderItemId, option.id];
+}
+
+/// Course active pour les prochains ajouts (Entrée / Plat / Dessert).
+final class CartActiveCourseSelected extends CartEvent {
+  const CartActiveCourseSelected(this.courseNumber);
+
+  final int courseNumber;
+
+  @override
+  List<Object?> get props => [courseNumber];
+}
+
+/// Change la course d'une ligne non envoyée en cuisine.
+final class CartItemCourseChanged extends CartEvent {
+  const CartItemCourseChanged({
+    required this.orderItemId,
+    required this.courseNumber,
+  });
+
+  final String orderItemId;
+  final int courseNumber;
+
+  @override
+  List<Object?> get props => [orderItemId, courseNumber];
+}
+
+/// Envoie la prochaine course en attente en cuisine (`fireNextPendingCourse`).
+final class CartCourseFireRequested extends CartEvent {
+  const CartCourseFireRequested();
 }

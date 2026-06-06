@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:core/core.dart';
+import 'package:dio/dio.dart';
 import 'package:ns_ds_network/ns_ds_network.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../protocol/event_envelope.dart';
 import '../protocol/event_serializer.dart';
+import '../protocol/pos_server_status.dart';
 import '../protocol/ws_action.dart';
 import '../sync/sync_queue_manager.dart';
 import 'connection_state.dart';
@@ -128,6 +130,69 @@ class WaiterNetworkClient implements NetworkSender {
   /// Connexion manuelle (fallback saisie IP).
   Future<void> connectManually(String ip, {int port = NsDsNetworkConstants.defaultPort}) {
     return connect(ip, port);
+  }
+
+  /// Statut HTTP de la caisse (`GET /ping`) — session caisse incluse.
+  Future<PosServerStatus?> fetchPosStatus() async {
+    final ip = _lastIp;
+    final port = _lastPort;
+    if (ip == null || port == null) {
+      return null;
+    }
+    try {
+      final response = await Dio().get<Map<String, dynamic>>(
+        'http://$ip:$port/ping',
+        options: Options(responseType: ResponseType.json),
+      );
+      final data = response.data;
+      if (data == null) {
+        return null;
+      }
+      return PosServerStatus.fromJson(data);
+    } catch (error) {
+      print('[WaiterNetworkClient] Ping HTTP échoué: $error');
+      return null;
+    }
+  }
+
+  /// Envoie un message et attend l'ACK correspondant (connexion directe requise).
+  Future<EventEnvelope> sendAndAwaitAck(
+    EventEnvelope envelope, {
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
+    if (!isConnected) {
+      throw StateError('WebSocket déconnecté — synchronisez d\'abord.');
+    }
+
+    final completer = Completer<EventEnvelope>();
+    late StreamSubscription<EventEnvelope> subscription;
+    subscription = messages.listen((message) {
+      if (message.action != WsAction.ack) {
+        return;
+      }
+      if (message.payload['originalMessageId'] == envelope.messageId) {
+        subscription.cancel();
+        if (!completer.isCompleted) {
+          completer.complete(message);
+        }
+      }
+    });
+
+    try {
+      await sendDirect(envelope);
+      return await completer.future.timeout(
+        timeout,
+        onTimeout: () {
+          subscription.cancel();
+          throw TimeoutException(
+            'Délai dépassé en attente ACK (${envelope.action})',
+          );
+        },
+      );
+    } catch (error) {
+      await subscription.cancel();
+      rethrow;
+    }
   }
 
   /// Envoie un message — enqueue offline si déconnecté.

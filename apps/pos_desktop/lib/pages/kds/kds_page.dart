@@ -150,12 +150,17 @@ class _KdsTicketCard extends StatelessWidget {
                 style: theme.textTheme.titleLarge,
               ),
             Text(
-              '$elapsed min · ${ticket.pendingItems.length} ligne(s)',
+              '$elapsed min · ${ticket.pendingItems.length} en cours'
+              '${ticket.heldItems.isNotEmpty ? ' · ${ticket.heldItems.length} à suivre' : ''}',
               style: theme.textTheme.labelLarge?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
             ),
             const Divider(height: AppSpacing.m),
+            for (final line in ticket.heldItems) ...[
+              _KdsHeldLine(line: line),
+              const SizedBox(height: AppSpacing.s),
+            ],
             for (final line in ticket.pendingItems) ...[
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,5 +219,51 @@ class _KdsTicketCard extends StatelessWidget {
     return quantity == quantity.roundToDouble()
         ? '${quantity.toInt()}'
         : quantity.toStringAsFixed(1);
+  }
+}
+
+class _KdsHeldLine extends StatelessWidget {
+  const _KdsHeldLine({required this.line});
+
+  final OrderItemWithProduct line;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final muted = scheme.onSurface.withValues(alpha: 0.45);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${_KdsTicketCard._formatQty(line.orderItem.quantity)} × ${line.product.name}',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: muted,
+                ),
+              ),
+              Text(
+                'À suivre · ${CourseHelpers.badgeLabel(line.orderItem.courseNumber)}',
+                style: theme.textTheme.labelMedium?.copyWith(color: muted),
+              ),
+              if (line.orderItem.customNotes != null &&
+                  line.orderItem.customNotes!.isNotEmpty)
+                Text(
+                  line.orderItem.customNotes!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: muted,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

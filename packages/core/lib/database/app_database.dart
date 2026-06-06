@@ -25,6 +25,7 @@ import 'tables/sync_queue.dart';
 import 'tables/time_attendance.dart';
 import 'tables/users.dart';
 import 'tables/zones.dart';
+import 'tables/vouchers.dart';
 
 part 'app_database.g.dart';
 
@@ -53,6 +54,7 @@ part 'app_database.g.dart';
     Payments,
     SyncQueue,
     AuditTrail,
+    Vouchers,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -62,7 +64,7 @@ class AppDatabase extends _$AppDatabase {
   final bool powerSyncManaged;
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -79,6 +81,9 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(orders, orders.companyName);
             await m.addColumn(orders, orders.companyIce);
             await m.addColumn(orders, orders.invoiceNumber);
+          }
+          if (from < 4) {
+            await m.createTable(vouchers);
           }
         },
       );

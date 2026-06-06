@@ -85,3 +85,12 @@ final class PaymentDiscountApplied extends PaymentEvent {
         reason,
       ];
 }
+
+final class PaymentVoucherScanned extends PaymentEvent {
+  const PaymentVoucherScanned(this.voucherCode);
+
+  final String voucherCode;
+
+  @override
+  List<Object?> get props => [voucherCode];
+}

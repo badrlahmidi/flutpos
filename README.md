@@ -36,7 +36,7 @@ flutter run -d windows   # ou chrome si pas de toolchain VS C++
 | 4 Salle avancée | ✅ (~88 %) | `docs/architecture/SPRINT4_ADVANCED_FLOOR_PROMPT.md` |
 | 5 Cloud & SaaS | ✅ (~75 %) | `docs/architecture/SPRINT5_CLOUD_SAAS_PROMPT.md` |
 
-Détail : [`docs/architecture/SPRINT_STATUS.md`](docs/architecture/SPRINT_STATUS.md) · Roadmap : [`docs/architecture/11_roadmap_and_business.md`](docs/architecture/11_roadmap_and_business.md) · **Audit final : [`docs/architecture/FINAL_AUDIT.md`](docs/architecture/FINAL_AUDIT.md)**
+Détail : [`docs/architecture/SPRINT_STATUS.md`](docs/architecture/SPRINT_STATUS.md) · Roadmap : [`docs/architecture/11_roadmap_and_business.md`](docs/architecture/11_roadmap_and_business.md) · **Audit de référence : [`audit_analysis.md`](audit_analysis.md)**
 
 ## Tests core
 

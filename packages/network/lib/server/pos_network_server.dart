@@ -20,15 +20,47 @@ import 'ws_message_handler.dart';
 class PosNetworkServer {
   PosNetworkServer({
     required AppDatabase database,
+    OrderRepository? orderRepository,
+    CashSessionRepository? cashSessionRepository,
+    ProductRepository? productRepository,
     WsClientRegistry? clientRegistry,
     WsMessageHandler? messageHandler,
     this.version = '1.0.0',
     this.port = NsDsNetworkConstants.defaultPort,
   })  : _database = database,
+        _cashSessionRepository = cashSessionRepository ??
+            CashSessionRepositoryImpl(
+              database,
+              AuditRepositoryImpl(database),
+            ),
         _clientRegistry = clientRegistry ?? WsClientRegistry(),
-        _messageHandler = messageHandler ?? WsMessageHandler();
+        _messageHandler = messageHandler ??
+            _createMessageHandler(
+              database: database,
+              orderRepository: orderRepository,
+              cashSessionRepository: cashSessionRepository,
+              productRepository: productRepository,
+            );
+
+  static WsMessageHandler _createMessageHandler({
+    required AppDatabase database,
+    OrderRepository? orderRepository,
+    CashSessionRepository? cashSessionRepository,
+    ProductRepository? productRepository,
+  }) {
+    final audit = AuditRepositoryImpl(database);
+    final sessions =
+        cashSessionRepository ?? CashSessionRepositoryImpl(database, audit);
+    return WsMessageHandler(
+      orderRepository:
+          orderRepository ?? OrderRepositoryImpl(database, audit),
+      cashSessionRepository: sessions,
+      productRepository: productRepository ?? ProductRepositoryImpl(database),
+    );
+  }
 
   final AppDatabase _database;
+  final CashSessionRepository _cashSessionRepository;
   final WsClientRegistry _clientRegistry;
   final WsMessageHandler _messageHandler;
 
@@ -60,7 +92,7 @@ class PosNetworkServer {
     }
 
     final router = Router()
-      ..get('/ping', _handlePing)
+      ..get('/ping', handlePingAsync)
       ..get('/ws', webSocketHandler(_handleWebSocket));
 
     final handler = Pipeline()
@@ -128,11 +160,15 @@ class PosNetworkServer {
     _safeSend(channel, EventSerializer.encode(envelope));
   }
 
-  Response _handlePing(Request request) {
+  /// Ping enrichi — indique si une session caisse est ouverte sur le PC.
+  Future<Response> handlePingAsync(Request request) async {
+    final session = await _cashSessionRepository.getAnyOpenSession();
     final body = jsonEncode({
       'status': 'online',
       'version': version,
-      'activeSessions': _clientRegistry.count,
+      'connectedClients': _clientRegistry.count,
+      'hasOpenSession': session != null,
+      if (session != null) 'cashSessionId': session.id,
     });
     return Response.ok(
       body,
@@ -154,7 +190,7 @@ class PosNetworkServer {
     );
   }
 
-  void _onMessage(WebSocketChannel webSocket, dynamic data) {
+  void _onMessage(WebSocketChannel webSocket, dynamic data) async {
     if (data is! String) {
       print('[PosNetworkServer] Message binaire ignoré.');
       return;
@@ -172,7 +208,7 @@ class PosNetworkServer {
       return;
     }
 
-    final response = _messageHandler.handle(envelope);
+    final response = await _messageHandler.handle(envelope);
     if (response.action == WsAction.pong) {
       _safeSend(webSocket, EventSerializer.encode(response));
       return;

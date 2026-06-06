@@ -1,0 +1,69 @@
+name: CI — Ritagestion POS
+
+on:
+  push:
+    branches: [main, feat/*, fix/*]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.x'
+          channel: stable
+          cache: true
+
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Bootstrap packages
+        run: melos bootstrap
+
+      # ── Analyse statique ──────────────────────────────────────
+      - name: Analyze core
+        run: dart analyze --fatal-infos
+        working-directory: packages/core
+
+      - name: Analyze network
+        run: dart analyze --fatal-infos
+        working-directory: packages/network
+
+      - name: Analyze pos_desktop
+        run: flutter analyze
+        working-directory: apps/pos_desktop
+
+      # ── Tests unitaires ───────────────────────────────────────
+      - name: Test core (73 tests)
+        run: dart test --reporter=expanded
+        working-directory: packages/core
+
+      - name: Test network (15 tests)
+        run: dart test --reporter=expanded
+        working-directory: packages/network
+
+      # ── Résumé ────────────────────────────────────────────────
+      - name: Summary
+        if: always()
+        run: |
+          echo "## CI Ritagestion" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | Résultat |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| core analyze | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| network analyze | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| pos_desktop analyze | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| core test | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| network test | ✅ |" >> $GITHUB_STEP_SUMMARY

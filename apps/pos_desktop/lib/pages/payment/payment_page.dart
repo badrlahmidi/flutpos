@@ -9,6 +9,7 @@ import '../../di/service_locator.dart';
 import '../../services/print/pos_print_service.dart';
 import '../../utils/manager_auth.dart';
 import '../../widgets/dialogs/apply_discount_dialog.dart';
+import '../../widgets/dialogs/voucher_dialog.dart';
 import '../../theme/app_spacing.dart';
 import '../../utils/price_formatter.dart';
 import '../../widgets/atoms/amount_numpad.dart';
@@ -32,8 +33,10 @@ class PaymentPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => PaymentBloc(orderRepository: sl<OrderRepository>())
-        ..add(PaymentStarted(orderId)),
+      create: (_) => PaymentBloc(
+        orderRepository: sl<OrderRepository>(),
+        voucherRepository: sl<VoucherRepository>(),
+      )..add(PaymentStarted(orderId)),
       child: _PaymentView(user: user),
     );
   }
@@ -159,6 +162,15 @@ class _ReadyViewState extends State<_ReadyView> {
     if (!mounted) {
       return;
     }
+    
+    if (method == PaymentMethod.voucher) {
+      final code = await showVoucherDialog(context);
+      if (code != null && mounted) {
+        context.read<PaymentBloc>().add(PaymentVoucherScanned(code));
+      }
+      return;
+    }
+    
     context.read<PaymentBloc>().add(PaymentMethodPressed(method));
   }
 

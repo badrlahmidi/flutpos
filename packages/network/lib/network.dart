@@ -4,6 +4,8 @@ library network;
 export 'protocol/event_envelope.dart';
 export 'protocol/ws_action.dart';
 export 'protocol/event_serializer.dart';
+export 'protocol/order_snapshot_codec.dart';
+export 'protocol/pos_server_status.dart';
 
 // Server (Desktop)
 export 'server/pos_network_server.dart';

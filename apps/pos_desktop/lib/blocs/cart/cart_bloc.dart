@@ -20,14 +20,18 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     on<CartItemModifierAdded>(_onModifierAdded);
     on<CartReloadRequested>(_onReloadRequested);
     on<CartProformaRequested>(_onProformaRequested);
-    on<CartDiscountApplied>(_onDiscountApplied);
+        on<CartDiscountApplied>(_onDiscountApplied);
     on<CartItemVoided>(_onItemVoided);
+    on<CartActiveCourseSelected>(_onActiveCourseSelected);
+    on<CartItemCourseChanged>(_onItemCourseChanged);
+    on<CartCourseFireRequested>(_onCourseFireRequested);
   }
 
   final OrderRepository _orderRepository;
   final CashSessionRepository _cashSessionRepository;
   String? _orderId;
   String? _cashierId;
+  int _activeCourseNumber = 1;
 
   Future<void> _onStarted(CartStarted event, Emitter<CartState> emit) async {
     emit(const CartLoading());
@@ -138,7 +142,8 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
     try {
       final orderType = current.orderType;
-      final mergeTarget = _findMergeableLine(current, event.product.id);
+      final course = event.courseNumber ?? _activeCourseNumber;
+      final mergeTarget = _findMergeableLine(current, event.product.id, course);
 
       if (mergeTarget != null) {
         await _orderRepository.updateOrderItemQuantity(
@@ -150,6 +155,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
           orderId: orderId,
           product: event.product,
           orderType: orderType,
+          courseNumber: course,
         );
       }
       await _emitOrder(emit);
@@ -175,6 +181,8 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         orderId: orderId,
         product: event.product,
         orderType: current.orderType,
+        courseNumber: event.courseNumber ?? _activeCourseNumber,
+        customNotes: event.customNotes,
       );
       for (final option in event.options) {
         await _orderRepository.addOrderItemModifier(
@@ -345,6 +353,70 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     }
   }
 
+  Future<void> _onActiveCourseSelected(
+    CartActiveCourseSelected event,
+    Emitter<CartState> emit,
+  ) async {
+    if (event.courseNumber < CourseHelpers.minCourse ||
+        event.courseNumber > CourseHelpers.maxCourse) {
+      return;
+    }
+    _activeCourseNumber = event.courseNumber;
+    final current = state.orderOrNull;
+    if (current == null) {
+      return;
+    }
+    emit(CartReady(current, activeCourseNumber: _activeCourseNumber));
+  }
+
+  Future<void> _onItemCourseChanged(
+    CartItemCourseChanged event,
+    Emitter<CartState> emit,
+  ) async {
+    if (_orderId == null) {
+      return;
+    }
+    emit(const CartLoading());
+    try {
+      await _orderRepository.updateOrderItemCourse(
+        orderItemId: event.orderItemId,
+        courseNumber: event.courseNumber,
+      );
+      await _emitOrder(emit);
+    } catch (e) {
+      await _recoverOrEmitError(emit, e, 'Course');
+    }
+  }
+
+  Future<void> _onCourseFireRequested(
+    CartCourseFireRequested event,
+    Emitter<CartState> emit,
+  ) async {
+    final orderId = _orderId;
+    if (orderId == null) {
+      return;
+    }
+    emit(const CartLoading());
+    try {
+      final result = await _orderRepository.fireNextPendingCourse(orderId);
+      if (result == null) {
+        await _emitOrder(
+          emit,
+          feedbackMessage: 'Aucune course en attente à envoyer',
+        );
+        return;
+      }
+      await _emitOrder(
+        emit,
+        fireCourseResult: result,
+        feedbackMessage:
+            'Course ${result.courseNumber} envoyée (${result.firedItems.length} ligne(s))',
+      );
+    } catch (e) {
+      await _recoverOrEmitError(emit, e, 'Envoi cuisine');
+    }
+  }
+
   Future<void> _onModifierAdded(
     CartItemModifierAdded event,
     Emitter<CartState> emit,
@@ -368,11 +440,14 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   OrderItemWithProduct? _findMergeableLine(
     CompleteOrder order,
     String productId,
+    int courseNumber,
   ) {
     for (final line in order.items) {
       if (line.product.id == productId &&
           line.modifiers.isEmpty &&
-          line.orderItem.status != 'VOIDED') {
+          line.orderItem.status != 'VOIDED' &&
+          !line.orderItem.isFired &&
+          line.orderItem.courseNumber == courseNumber) {
         return line;
       }
     }
@@ -382,6 +457,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   Future<void> _emitOrder(
     Emitter<CartState> emit, {
     String? feedbackMessage,
+    FireCourseResult? fireCourseResult,
   }) async {
     final orderId = _orderId;
     if (orderId == null) {
@@ -394,6 +470,11 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       emit(const CartError('Commande introuvable'));
       return;
     }
-    emit(CartReady(complete, feedbackMessage: feedbackMessage));
+    emit(CartReady(
+      complete,
+      feedbackMessage: feedbackMessage,
+      fireCourseResult: fireCourseResult,
+      activeCourseNumber: _activeCourseNumber,
+    ));
   }
 }

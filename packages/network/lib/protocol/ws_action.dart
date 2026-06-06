@@ -8,6 +8,9 @@ abstract final class WsAction {
   /// Mobile → PC : ajout d'articles à une commande existante.
   static const addItems = 'ADD_ITEMS';
 
+  /// Mobile → PC : récupère le ticket ouvert d'une table (sync miroir).
+  static const getOpenOrder = 'GET_OPEN_ORDER';
+
   /// Mobile → PC : annulation d'un article (void).
   static const voidItem = 'VOID_ITEM';
 
@@ -16,6 +19,9 @@ abstract final class WsAction {
 
   /// Mobile → PC : réclamer la suite (fire course).
   static const fireCourse = 'FIRE_COURSE';
+
+  /// Mobile → PC : changer la course d'une ligne.
+  static const updateItemCourse = 'UPDATE_ITEM_COURSE';
 
   /// Mobile → PC : mise à jour stock temps réel.
   static const updateStock = 'UPDATE_STOCK';

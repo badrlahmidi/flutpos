@@ -13,24 +13,27 @@ class KdsRepositoryImpl implements KdsRepository {
   final OrderRepository _orders;
 
   static const _pendingStatuses = ['PENDING'];
+  static const _heldStatuses = ['ACTIVE'];
 
   @override
   Future<List<KdsOrderTicket>> loadPendingTickets() async {
-    final pendingItems = await (_db.select(_db.orderItems)
+    final kitchenItems = await (_db.select(_db.orderItems)
           ..where(
             (i) =>
-                i.isFired.equals(true) &
-                i.status.isIn(_pendingStatuses),
+                (i.isFired.equals(true) &
+                    i.status.isIn(_pendingStatuses)) |
+                (i.isFired.equals(false) &
+                    i.status.isIn(_heldStatuses)),
           )
           ..orderBy([(i) => OrderingTerm.asc(i.createdAt)]))
         .get();
 
-    if (pendingItems.isEmpty) {
+    if (kitchenItems.isEmpty) {
       return [];
     }
 
     final byOrder = <String, List<OrderItem>>{};
-    for (final item in pendingItems) {
+    for (final item in kitchenItems) {
       byOrder.putIfAbsent(item.orderId, () => []).add(item);
     }
 
@@ -54,11 +57,27 @@ class KdsRepositoryImpl implements KdsRepository {
         continue;
       }
 
+      final pending = lines
+          .where(
+            (l) =>
+                l.orderItem.isFired &&
+                _pendingStatuses.contains(l.orderItem.status),
+          )
+          .toList();
+      final held = lines
+          .where((l) => !l.orderItem.isFired && l.orderItem.status == 'ACTIVE')
+          .toList();
+
+      if (pending.isEmpty && held.isEmpty) {
+        continue;
+      }
+
       tickets.add(
         KdsOrderTicket(
           order: complete.order,
           table: complete.table,
-          pendingItems: lines,
+          pendingItems: pending,
+          heldItems: held,
           headerLabel: _headerLabel(complete.order, complete.table),
         ),
       );

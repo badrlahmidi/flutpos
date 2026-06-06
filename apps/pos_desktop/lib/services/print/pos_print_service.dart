@@ -2,17 +2,20 @@ import 'dart:async';
 
 import 'dart:io';
 
-
+import 'dart:ui' as ui;
 
 import 'package:core/core.dart';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show FontWeight, TextStyle;
 
 import 'package:path/path.dart' as p;
 
 import 'package:path_provider/path_provider.dart';
 
 import 'package:unified_esc_pos_printer/unified_esc_pos_printer.dart';
+
+import '../../utils/escpos_arabic_text.dart';
 
 
 
@@ -59,6 +62,10 @@ class PosPrintService {
     required CompleteOrder order,
 
     required List<OrderItemWithProduct> lines,
+
+    int? firedCourseNumber,
+
+    bool isCourseClaim = false,
 
   }) async {
 
@@ -115,6 +122,10 @@ class PosPrintService {
         lines: entry.value,
 
         groupIdenticalLines: PrintStationTags.isBar(station),
+
+        firedCourseNumber: firedCourseNumber,
+
+        isCourseClaim: isCourseClaim,
 
       );
 
@@ -611,25 +622,32 @@ class PosPrintService {
         final ticket = await Ticket.create(PaperSize.mm80);
 
         for (final line in lines) {
-
-          ticket.text(
-
-            line,
-
-            align: line.startsWith('***')
-
-                ? PrintAlign.center
-
-                : PrintAlign.left,
-
-            style: line.startsWith('***')
-
-                ? const PrintTextStyle(bold: true, height: TextSize.size2)
-
-                : const PrintTextStyle(),
-
-          );
-
+          final isHeader = line.startsWith('***');
+          final align =
+              isHeader ? PrintAlign.center : PrintAlign.left;
+          if (EscPosArabicText.containsArabic(line)) {
+            await ticket.textRaster(
+              line,
+              textDirection: ui.TextDirection.rtl,
+              align: align,
+              style: TextStyle(
+                fontSize: isHeader ? 28 : 24,
+                fontWeight:
+                    isHeader ? FontWeight.bold : FontWeight.normal,
+              ),
+            );
+          } else {
+            ticket.text(
+              line,
+              align: align,
+              style: isHeader
+                  ? const PrintTextStyle(
+                      bold: true,
+                      height: TextSize.size2,
+                    )
+                  : const PrintTextStyle(),
+            );
+          }
         }
 
         ticket.cut();
@@ -725,7 +743,6 @@ class PosPrintService {
 
 
     // ignore: avoid_print
-
     print(output);
 
 

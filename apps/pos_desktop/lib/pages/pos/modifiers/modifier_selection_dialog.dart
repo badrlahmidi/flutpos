@@ -3,15 +3,27 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_spacing.dart';
 import '../../../utils/price_formatter.dart';
+import '../../../widgets/atoms/auto_direction_text_field.dart';
 import '../../../widgets/widgets.dart';
 
-/// Affiche le modal de sélection des modificateurs ; retourne les options choisies.
-Future<List<ModifierOption>?> showModifierSelectionDialog({
+/// Résultat du modal modificateurs (options + note libre cuisine).
+class ModifierSelectionResult {
+  const ModifierSelectionResult({
+    required this.options,
+    this.customNotes,
+  });
+
+  final List<ModifierOption> options;
+  final String? customNotes;
+}
+
+/// Affiche le modal de sélection des modificateurs.
+Future<ModifierSelectionResult?> showModifierSelectionDialog({
   required BuildContext context,
   required Product product,
   required List<ModifierGroupWithOptions> groups,
 }) {
-  return showDialog<List<ModifierOption>>(
+  return showDialog<ModifierSelectionResult>(
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) => _ModifierSelectionDialog(
@@ -37,6 +49,13 @@ class _ModifierSelectionDialog extends StatefulWidget {
 
 class _ModifierSelectionDialogState extends State<_ModifierSelectionDialog> {
   final Map<String, Set<String>> _selectedByGroup = {};
+  final _notesController = TextEditingController();
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
 
   bool get _isValid {
     for (final group in widget.groups) {
@@ -146,6 +165,18 @@ class _ModifierSelectionDialogState extends State<_ModifierSelectionDialog> {
                   },
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+                child: AutoDirectionTextField(
+                  controller: _notesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Note cuisine (FR / AR)',
+                    hintText: 'Ex: بدون بصل',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+              ),
               const Divider(height: 1),
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.m),
@@ -166,7 +197,16 @@ class _ModifierSelectionDialogState extends State<_ModifierSelectionDialog> {
                         icon: Icons.add_shopping_cart,
                         expand: true,
                         onPressed: _isValid
-                            ? () => Navigator.of(context).pop(_selectedOptions)
+                            ? () {
+                                final notes = _notesController.text.trim();
+                                Navigator.of(context).pop(
+                                  ModifierSelectionResult(
+                                    options: _selectedOptions,
+                                    customNotes:
+                                        notes.isEmpty ? null : notes,
+                                  ),
+                                );
+                              }
                             : null,
                       ),
                     ),

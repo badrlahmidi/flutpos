@@ -29,6 +29,15 @@ class CashSessionRepositoryImpl implements CashSessionRepository {
   }
 
   @override
+  Future<CashSession?> getAnyOpenSession() {
+    return (_db.select(_db.cashSessions)
+          ..where((s) => s.status.equals('OPEN'))
+          ..orderBy([(s) => OrderingTerm.desc(s.openedAt)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  @override
   Future<CashSessionReport> buildSessionReport(String sessionId) async {
     final session = await (_db.select(_db.cashSessions)
           ..where((s) => s.id.equals(sessionId)))

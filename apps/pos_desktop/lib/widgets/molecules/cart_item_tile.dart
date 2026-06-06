@@ -1,18 +1,19 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
-import '../../theme/app_spacing.dart';
+import '../../theme/pos_design_tokens.dart';
 import '../../utils/price_formatter.dart';
 
-/// Ligne de panier avec contrôles quantité et suppression.
+/// Ligne panier compacte — maquette Ritaj POS.
 class CartItemTile extends StatelessWidget {
   const CartItemTile({
     super.key,
     required this.line,
     required this.onIncrement,
     required this.onDecrement,
-    required     this.onRemove,
+    required this.onRemove,
     this.isLocked = false,
+    this.onCourseChanged,
   });
 
   final OrderItemWithProduct line;
@@ -20,138 +21,173 @@ class CartItemTile extends StatelessWidget {
   final VoidCallback onDecrement;
   final VoidCallback? onRemove;
   final bool isLocked;
+  final ValueChanged<int>? onCourseChanged;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final qty = line.orderItem.quantity;
-    final modifierLabels = line.modifierSummary;
+    final unit = line.orderItem.unitPrice;
     final sentToKitchen = line.orderItem.isFired;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s,
-        vertical: AppSpacing.xs,
-      ),
-      child: Material(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.s),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.s),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: PosDesignTokens.cardBackground,
+          borderRadius: BorderRadius.circular(PosDesignTokens.radiusMd),
+          border: Border.all(color: PosDesignTokens.borderLight),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _Thumb(imageUrl: line.product.image),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          line.product.name,
-                          style: theme.textTheme.titleMedium,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (sentToKitchen) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(top: AppSpacing.xs),
-                            child: Text(
-                              'Envoyé cuisine',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: scheme.tertiary,
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (modifierLabels.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(top: AppSpacing.xs),
-                            child: Text(
-                              modifierLabels,
-                              style: theme.textTheme.labelSmall,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
                   Text(
-                    PriceFormatter.format(line.lineSubtotal),
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    line.product.name,
+                    style: const TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: scheme.primary,
+                      fontSize: 14,
                     ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_formatQty(qty)} x ${PriceFormatter.format(unit)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: PosDesignTokens.textMuted,
+                    ),
+                  ),
+                  if (line.modifierSummary.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '- ${line.modifierSummary}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: PosDesignTokens.textMuted,
+                      ),
+                    ),
+                  ],
+                  if (line.orderItem.customNotes != null &&
+                      line.orderItem.customNotes!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      line.orderItem.customNotes!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: PosDesignTokens.offlineRed,
+                      ),
+                    ),
+                  ],
+                  if (sentToKitchen)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Envoyé cuisine',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: PosDesignTokens.primaryBlue,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _QtyBtn(icon: Icons.remove, onTap: isLocked ? null : onDecrement),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          _formatQty(qty),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      _QtyBtn(icon: Icons.add, onTap: isLocked ? null : onIncrement),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.s),
-              Row(
-                children: [
-                  _QtyButton(
-                    icon: Icons.remove,
-                    onPressed: isLocked ? null : onDecrement,
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  PriceFormatter.format(line.lineSubtotal),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: PosDesignTokens.primaryBlue,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.m,
-                    ),
-                    child: Text(
-                      qty == qty.roundToDouble()
-                          ? '${qty.toInt()}'
-                          : qty.toStringAsFixed(1),
-                      style: theme.textTheme.titleMedium,
-                    ),
-                  ),
-                  _QtyButton(
-                    icon: Icons.add,
-                    onPressed: isLocked ? null : onIncrement,
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    tooltip: sentToKitchen
-                        ? 'Annuler (void cuisine)'
-                        : 'Supprimer la ligne',
-                    onPressed: isLocked || onRemove == null ? null : onRemove,
-                    icon: Icon(
-                      sentToKitchen
-                          ? Icons.block
-                          : Icons.delete_outline,
-                      color: scheme.error,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  onSelected: (value) {
+                    if (value == 'remove' && onRemove != null) {
+                      onRemove!();
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    if (onRemove != null)
+                      const PopupMenuItem(
+                        value: 'remove',
+                        child: Text('Supprimer'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
+  static String _formatQty(double q) =>
+      q == q.roundToDouble() ? '${q.toInt()}' : q.toStringAsFixed(1);
 }
 
-class _QtyButton extends StatelessWidget {
-  const _QtyButton({required this.icon, this.onPressed});
-
-  final IconData icon;
-  final VoidCallback? onPressed;
+class _Thumb extends StatelessWidget {
+  const _Thumb({this.imageUrl});
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: AppSpacing.minTouchTarget,
-      height: AppSpacing.minTouchTarget,
-      child: Material(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppSpacing.s),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onPressed,
-          child: Icon(icon),
+    final url = imageUrl;
+    if (url != null && url.isNotEmpty) {
+      return Image.network(url, width: 52, height: 52, fit: BoxFit.cover);
+    }
+    return Container(
+      width: 52,
+      height: 52,
+      color: PosDesignTokens.shellBackground,
+      child: const Icon(Icons.restaurant, size: 22, color: PosDesignTokens.textMuted),
+    );
+  }
+}
+
+class _QtyBtn extends StatelessWidget {
+  const _QtyBtn({required this.icon, this.onTap});
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: PosDesignTokens.shellBackground,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: Icon(icon, size: 16),
         ),
       ),
     );

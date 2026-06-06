@@ -11,6 +11,7 @@ import 'widgets/session_report_panel.dart';
 import 'z_close_page.dart';
 import '../backoffice/analytics_dashboard_page.dart';
 import '../backoffice/accounting_export_page.dart';
+import '../backoffice/catalog_admin_page.dart';
 
 /// Hub trésorerie : ouverture, pay-in/out, X-Report.
 class SessionHubPage extends StatefulWidget {
@@ -188,6 +189,20 @@ class _SessionHubPageState extends State<SessionHubPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       PosButton(
+                        label: 'CATALOGUE AR (nameAr)',
+                        icon: Icons.translate,
+                        variant: PosButtonVariant.outlined,
+                        expand: true,
+                        onPressed: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const CatalogAdminPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.s),
+                      PosButton(
                         label: 'EXPORT COMPTABLE CSV',
                         icon: Icons.file_download_outlined,
                         variant: PosButtonVariant.outlined,
@@ -256,8 +271,8 @@ class _SessionHubPageState extends State<SessionHubPage> {
                           onPressed: _report == null
                               ? null
                               : () async {
-                                  final closed =
-                                      await Navigator.of(context).push<bool>(
+                                  final navigator = Navigator.of(context);
+                                  final closed = await navigator.push<bool>(
                                     MaterialPageRoute<bool>(
                                       builder: (_) => ZClosePage(
                                         user: widget.user,
@@ -266,7 +281,7 @@ class _SessionHubPageState extends State<SessionHubPage> {
                                     ),
                                   );
                                   if (closed == true && mounted) {
-                                    Navigator.of(context).pop(true);
+                                    navigator.pop(true);
                                   } else {
                                     await _load();
                                   }

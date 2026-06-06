@@ -20,4 +20,22 @@ abstract class ProductRepository {
   Future<List<ModifierGroupWithOptions>> getModifierGroupsForProduct(
     String productId,
   );
+
+  /// Tous les produits actifs (admin catalogue).
+  Future<List<Product>> listAllActiveProducts();
+
+  /// Met à jour le libellé arabe d'un produit.
+  Future<void> updateProductNameAr({
+    required String productId,
+    String? nameAr,
+  });
+
+  /// Toutes les options de modificateurs actives.
+  Future<List<ModifierOption>> listAllModifierOptions();
+
+  /// Met à jour le libellé arabe d'une option modificateur.
+  Future<void> updateModifierOptionNameAr({
+    required String optionId,
+    String? nameAr,
+  });
 }

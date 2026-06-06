@@ -7,20 +7,26 @@ class KdsOrderTicket {
     required this.order,
     this.table,
     required this.pendingItems,
+    this.heldItems = const [],
     this.headerLabel,
   });
 
   final Order order;
   final RestaurantTable? table;
+  /// Lignes envoyées en cuisine, en attente de préparation.
   final List<OrderItemWithProduct> pendingItems;
+  /// Lignes non encore réclamées (`isFired == false`) — affichées « À suivre ».
+  final List<OrderItemWithProduct> heldItems;
   final String? headerLabel;
 
   DateTime get oldestItemAt {
-    if (pendingItems.isEmpty) {
+    final timestamps = [
+      ...pendingItems.map((i) => i.orderItem.createdAt),
+      ...heldItems.map((i) => i.orderItem.createdAt),
+    ];
+    if (timestamps.isEmpty) {
       return order.createdAt;
     }
-    return pendingItems
-        .map((i) => i.orderItem.createdAt)
-        .reduce((a, b) => a.isBefore(b) ? a : b);
+    return timestamps.reduce((a, b) => a.isBefore(b) ? a : b);
   }
 }

@@ -17,12 +17,29 @@ final class CartLoading extends CartState {
 }
 
 final class CartReady extends CartState {
-  const CartReady(this.order, {this.feedbackMessage});
+  const CartReady(
+    this.order, {
+    this.feedbackMessage,
+    this.fireCourseResult,
+    this.activeCourseNumber = 1,
+  });
 
   final CompleteOrder order;
   final String? feedbackMessage;
+  final FireCourseResult? fireCourseResult;
+  final int activeCourseNumber;
 
   int get itemCount => order.items.length;
+
+  bool get hasUnfiredItems =>
+      order.activeItems.any((l) => !l.orderItem.isFired);
+
+  bool get hasFiredItems =>
+      order.activeItems.any((l) => l.orderItem.isFired);
+
+  bool get canClaimNextCourse => hasFiredItems && hasUnfiredItems;
+
+  bool get canSendFirstCourse => hasUnfiredItems && !hasFiredItems;
 
   @override
   List<Object?> get props => [
@@ -30,6 +47,8 @@ final class CartReady extends CartState {
         order.items.length,
         order.subtotalAmount,
         feedbackMessage,
+        fireCourseResult?.courseNumber,
+        activeCourseNumber,
       ];
 }
 

@@ -11656,6 +11656,456 @@ class AuditTrailCompanion extends UpdateCompanion<AuditTrailData> {
   }
 }
 
+class $VouchersTable extends Vouchers with TableInfo<$VouchersTable, Voucher> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $VouchersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newUuid,
+  );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('ACTIVE'),
+  );
+  static const VerificationMeta _orderIdMeta = const VerificationMeta(
+    'orderId',
+  );
+  @override
+  late final GeneratedColumn<String> orderId = GeneratedColumn<String>(
+    'order_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES orders (id)',
+    ),
+  );
+  static const VerificationMeta _usedAtMeta = const VerificationMeta('usedAt');
+  @override
+  late final GeneratedColumn<DateTime> usedAt = GeneratedColumn<DateTime>(
+    'used_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    code,
+    amount,
+    status,
+    orderId,
+    usedAt,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'vouchers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Voucher> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_codeMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('order_id')) {
+      context.handle(
+        _orderIdMeta,
+        orderId.isAcceptableOrUnknown(data['order_id']!, _orderIdMeta),
+      );
+    }
+    if (data.containsKey('used_at')) {
+      context.handle(
+        _usedAtMeta,
+        usedAt.isAcceptableOrUnknown(data['used_at']!, _usedAtMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Voucher map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Voucher(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      orderId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}order_id'],
+      ),
+      usedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}used_at'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $VouchersTable createAlias(String alias) {
+    return $VouchersTable(attachedDatabase, alias);
+  }
+}
+
+class Voucher extends DataClass implements Insertable<Voucher> {
+  final String id;
+  final String code;
+  final double amount;
+  final String status;
+  final String? orderId;
+  final DateTime? usedAt;
+  final DateTime createdAt;
+  const Voucher({
+    required this.id,
+    required this.code,
+    required this.amount,
+    required this.status,
+    this.orderId,
+    this.usedAt,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['code'] = Variable<String>(code);
+    map['amount'] = Variable<double>(amount);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || orderId != null) {
+      map['order_id'] = Variable<String>(orderId);
+    }
+    if (!nullToAbsent || usedAt != null) {
+      map['used_at'] = Variable<DateTime>(usedAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  VouchersCompanion toCompanion(bool nullToAbsent) {
+    return VouchersCompanion(
+      id: Value(id),
+      code: Value(code),
+      amount: Value(amount),
+      status: Value(status),
+      orderId: orderId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(orderId),
+      usedAt: usedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(usedAt),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory Voucher.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Voucher(
+      id: serializer.fromJson<String>(json['id']),
+      code: serializer.fromJson<String>(json['code']),
+      amount: serializer.fromJson<double>(json['amount']),
+      status: serializer.fromJson<String>(json['status']),
+      orderId: serializer.fromJson<String?>(json['orderId']),
+      usedAt: serializer.fromJson<DateTime?>(json['usedAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'code': serializer.toJson<String>(code),
+      'amount': serializer.toJson<double>(amount),
+      'status': serializer.toJson<String>(status),
+      'orderId': serializer.toJson<String?>(orderId),
+      'usedAt': serializer.toJson<DateTime?>(usedAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Voucher copyWith({
+    String? id,
+    String? code,
+    double? amount,
+    String? status,
+    Value<String?> orderId = const Value.absent(),
+    Value<DateTime?> usedAt = const Value.absent(),
+    DateTime? createdAt,
+  }) => Voucher(
+    id: id ?? this.id,
+    code: code ?? this.code,
+    amount: amount ?? this.amount,
+    status: status ?? this.status,
+    orderId: orderId.present ? orderId.value : this.orderId,
+    usedAt: usedAt.present ? usedAt.value : this.usedAt,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  Voucher copyWithCompanion(VouchersCompanion data) {
+    return Voucher(
+      id: data.id.present ? data.id.value : this.id,
+      code: data.code.present ? data.code.value : this.code,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      status: data.status.present ? data.status.value : this.status,
+      orderId: data.orderId.present ? data.orderId.value : this.orderId,
+      usedAt: data.usedAt.present ? data.usedAt.value : this.usedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Voucher(')
+          ..write('id: $id, ')
+          ..write('code: $code, ')
+          ..write('amount: $amount, ')
+          ..write('status: $status, ')
+          ..write('orderId: $orderId, ')
+          ..write('usedAt: $usedAt, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, code, amount, status, orderId, usedAt, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Voucher &&
+          other.id == this.id &&
+          other.code == this.code &&
+          other.amount == this.amount &&
+          other.status == this.status &&
+          other.orderId == this.orderId &&
+          other.usedAt == this.usedAt &&
+          other.createdAt == this.createdAt);
+}
+
+class VouchersCompanion extends UpdateCompanion<Voucher> {
+  final Value<String> id;
+  final Value<String> code;
+  final Value<double> amount;
+  final Value<String> status;
+  final Value<String?> orderId;
+  final Value<DateTime?> usedAt;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const VouchersCompanion({
+    this.id = const Value.absent(),
+    this.code = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.status = const Value.absent(),
+    this.orderId = const Value.absent(),
+    this.usedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  VouchersCompanion.insert({
+    this.id = const Value.absent(),
+    required String code,
+    required double amount,
+    this.status = const Value.absent(),
+    this.orderId = const Value.absent(),
+    this.usedAt = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : code = Value(code),
+       amount = Value(amount),
+       createdAt = Value(createdAt);
+  static Insertable<Voucher> custom({
+    Expression<String>? id,
+    Expression<String>? code,
+    Expression<double>? amount,
+    Expression<String>? status,
+    Expression<String>? orderId,
+    Expression<DateTime>? usedAt,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (code != null) 'code': code,
+      if (amount != null) 'amount': amount,
+      if (status != null) 'status': status,
+      if (orderId != null) 'order_id': orderId,
+      if (usedAt != null) 'used_at': usedAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  VouchersCompanion copyWith({
+    Value<String>? id,
+    Value<String>? code,
+    Value<double>? amount,
+    Value<String>? status,
+    Value<String?>? orderId,
+    Value<DateTime?>? usedAt,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return VouchersCompanion(
+      id: id ?? this.id,
+      code: code ?? this.code,
+      amount: amount ?? this.amount,
+      status: status ?? this.status,
+      orderId: orderId ?? this.orderId,
+      usedAt: usedAt ?? this.usedAt,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (orderId.present) {
+      map['order_id'] = Variable<String>(orderId.value);
+    }
+    if (usedAt.present) {
+      map['used_at'] = Variable<DateTime>(usedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('VouchersCompanion(')
+          ..write('id: $id, ')
+          ..write('code: $code, ')
+          ..write('amount: $amount, ')
+          ..write('status: $status, ')
+          ..write('orderId: $orderId, ')
+          ..write('usedAt: $usedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -11691,6 +12141,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PaymentsTable payments = $PaymentsTable(this);
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
   late final $AuditTrailTable auditTrail = $AuditTrailTable(this);
+  late final $VouchersTable vouchers = $VouchersTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -11719,6 +12170,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     payments,
     syncQueue,
     auditTrail,
+    vouchers,
   ];
 }
 
@@ -19384,6 +19836,25 @@ final class $$OrdersTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$VouchersTable, List<Voucher>> _vouchersRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.vouchers,
+    aliasName: $_aliasNameGenerator(db.orders.id, db.vouchers.orderId),
+  );
+
+  $$VouchersTableProcessedTableManager get vouchersRefs {
+    final manager = $$VouchersTableTableManager(
+      $_db,
+      $_db.vouchers,
+    ).filter((f) => f.orderId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_vouchersRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$OrdersTableFilterComposer
@@ -19598,6 +20069,31 @@ class $$OrdersTableFilterComposer
           }) => $$PaymentsTableFilterComposer(
             $db: $db,
             $table: $db.payments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> vouchersRefs(
+    Expression<bool> Function($$VouchersTableFilterComposer f) f,
+  ) {
+    final $$VouchersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.vouchers,
+      getReferencedColumn: (t) => t.orderId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$VouchersTableFilterComposer(
+            $db: $db,
+            $table: $db.vouchers,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -19988,6 +20484,31 @@ class $$OrdersTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> vouchersRefs<T extends Object>(
+    Expression<T> Function($$VouchersTableAnnotationComposer a) f,
+  ) {
+    final $$VouchersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.vouchers,
+      getReferencedColumn: (t) => t.orderId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$VouchersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.vouchers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$OrdersTableTableManager
@@ -20010,6 +20531,7 @@ class $$OrdersTableTableManager
             bool discountAuthorizedBy,
             bool orderItemsRefs,
             bool paymentsRefs,
+            bool vouchersRefs,
           })
         > {
   $$OrdersTableTableManager(_$AppDatabase db, $OrdersTable table)
@@ -20121,12 +20643,14 @@ class $$OrdersTableTableManager
                 discountAuthorizedBy = false,
                 orderItemsRefs = false,
                 paymentsRefs = false,
+                vouchersRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (orderItemsRefs) db.orderItems,
                     if (paymentsRefs) db.payments,
+                    if (vouchersRefs) db.vouchers,
                   ],
                   addJoins:
                       <
@@ -20239,6 +20763,23 @@ class $$OrdersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (vouchersRefs)
+                        await $_getPrefetchedData<Order, $OrdersTable, Voucher>(
+                          currentTable: table,
+                          referencedTable: $$OrdersTableReferences
+                              ._vouchersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$OrdersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).vouchersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.orderId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -20266,6 +20807,7 @@ typedef $$OrdersTableProcessedTableManager =
         bool discountAuthorizedBy,
         bool orderItemsRefs,
         bool paymentsRefs,
+        bool vouchersRefs,
       })
     >;
 typedef $$OrderItemsTableCreateCompanionBuilder =
@@ -22685,6 +23227,362 @@ typedef $$AuditTrailTableProcessedTableManager =
       AuditTrailData,
       PrefetchHooks Function({bool userId})
     >;
+typedef $$VouchersTableCreateCompanionBuilder =
+    VouchersCompanion Function({
+      Value<String> id,
+      required String code,
+      required double amount,
+      Value<String> status,
+      Value<String?> orderId,
+      Value<DateTime?> usedAt,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$VouchersTableUpdateCompanionBuilder =
+    VouchersCompanion Function({
+      Value<String> id,
+      Value<String> code,
+      Value<double> amount,
+      Value<String> status,
+      Value<String?> orderId,
+      Value<DateTime?> usedAt,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$VouchersTableReferences
+    extends BaseReferences<_$AppDatabase, $VouchersTable, Voucher> {
+  $$VouchersTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $OrdersTable _orderIdTable(_$AppDatabase db) => db.orders.createAlias(
+    $_aliasNameGenerator(db.vouchers.orderId, db.orders.id),
+  );
+
+  $$OrdersTableProcessedTableManager? get orderId {
+    final $_column = $_itemColumn<String>('order_id');
+    if ($_column == null) return null;
+    final manager = $$OrdersTableTableManager(
+      $_db,
+      $_db.orders,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_orderIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$VouchersTableFilterComposer
+    extends Composer<_$AppDatabase, $VouchersTable> {
+  $$VouchersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get usedAt => $composableBuilder(
+    column: $table.usedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$OrdersTableFilterComposer get orderId {
+    final $$OrdersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.orderId,
+      referencedTable: $db.orders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OrdersTableFilterComposer(
+            $db: $db,
+            $table: $db.orders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$VouchersTableOrderingComposer
+    extends Composer<_$AppDatabase, $VouchersTable> {
+  $$VouchersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get usedAt => $composableBuilder(
+    column: $table.usedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$OrdersTableOrderingComposer get orderId {
+    final $$OrdersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.orderId,
+      referencedTable: $db.orders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OrdersTableOrderingComposer(
+            $db: $db,
+            $table: $db.orders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$VouchersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $VouchersTable> {
+  $$VouchersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get usedAt =>
+      $composableBuilder(column: $table.usedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$OrdersTableAnnotationComposer get orderId {
+    final $$OrdersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.orderId,
+      referencedTable: $db.orders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OrdersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.orders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$VouchersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $VouchersTable,
+          Voucher,
+          $$VouchersTableFilterComposer,
+          $$VouchersTableOrderingComposer,
+          $$VouchersTableAnnotationComposer,
+          $$VouchersTableCreateCompanionBuilder,
+          $$VouchersTableUpdateCompanionBuilder,
+          (Voucher, $$VouchersTableReferences),
+          Voucher,
+          PrefetchHooks Function({bool orderId})
+        > {
+  $$VouchersTableTableManager(_$AppDatabase db, $VouchersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$VouchersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$VouchersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$VouchersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> code = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> orderId = const Value.absent(),
+                Value<DateTime?> usedAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => VouchersCompanion(
+                id: id,
+                code: code,
+                amount: amount,
+                status: status,
+                orderId: orderId,
+                usedAt: usedAt,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                required String code,
+                required double amount,
+                Value<String> status = const Value.absent(),
+                Value<String?> orderId = const Value.absent(),
+                Value<DateTime?> usedAt = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => VouchersCompanion.insert(
+                id: id,
+                code: code,
+                amount: amount,
+                status: status,
+                orderId: orderId,
+                usedAt: usedAt,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$VouchersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({orderId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (orderId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.orderId,
+                                referencedTable: $$VouchersTableReferences
+                                    ._orderIdTable(db),
+                                referencedColumn: $$VouchersTableReferences
+                                    ._orderIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$VouchersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $VouchersTable,
+      Voucher,
+      $$VouchersTableFilterComposer,
+      $$VouchersTableOrderingComposer,
+      $$VouchersTableAnnotationComposer,
+      $$VouchersTableCreateCompanionBuilder,
+      $$VouchersTableUpdateCompanionBuilder,
+      (Voucher, $$VouchersTableReferences),
+      Voucher,
+      PrefetchHooks Function({bool orderId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -22735,4 +23633,6 @@ class $AppDatabaseManager {
       $$SyncQueueTableTableManager(_db, _db.syncQueue);
   $$AuditTrailTableTableManager get auditTrail =>
       $$AuditTrailTableTableManager(_db, _db.auditTrail);
+  $$VouchersTableTableManager get vouchers =>
+      $$VouchersTableTableManager(_db, _db.vouchers);
 }
