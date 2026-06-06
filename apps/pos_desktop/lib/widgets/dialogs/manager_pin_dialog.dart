@@ -6,17 +6,30 @@ import '../../theme/app_spacing.dart';
 import '../../pages/auth/widgets/pin_dots_indicator.dart';
 import '../../pages/auth/widgets/pin_numpad.dart';
 
-/// Modal PIN Manager (rôle [ADMIN]) pour actions sensibles.
-Future<User?> showManagerPinDialog(BuildContext context) {
+/// Modal PIN Manager pour actions sensibles (niveau d'accès requis).
+Future<User?> showManagerPinDialog(
+  BuildContext context, {
+  int requiredLevel = 1,
+  String? operationLabel,
+}) {
   return showDialog<User>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const _ManagerPinDialog(),
+    builder: (_) => _ManagerPinDialog(
+      requiredLevel: requiredLevel,
+      operationLabel: operationLabel,
+    ),
   );
 }
 
 class _ManagerPinDialog extends StatefulWidget {
-  const _ManagerPinDialog();
+  const _ManagerPinDialog({
+    required this.requiredLevel,
+    this.operationLabel,
+  });
+
+  final int requiredLevel;
+  final String? operationLabel;
 
   @override
   State<_ManagerPinDialog> createState() => _ManagerPinDialogState();
@@ -39,8 +52,10 @@ class _ManagerPinDialogState extends State<_ManagerPinDialog> {
       _errorMessage = null;
     });
 
-    final manager =
-        await sl<AuthRepository>().verifyManagerPin(_pin.toString());
+    final manager = await sl<AuthRepository>().verifyManagerPin(
+      _pin.toString(),
+      minLevel: widget.requiredLevel,
+    );
 
     if (!mounted) {
       return;
@@ -80,10 +95,13 @@ class _ManagerPinDialogState extends State<_ManagerPinDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Entrez le PIN administrateur',
+              widget.operationLabel != null
+                  ? 'Autorisation requise : ${widget.operationLabel}'
+                  : 'Entrez le PIN d\'un utilisateur niveau ≥ ${widget.requiredLevel}',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.m),
             PinDotsIndicator(

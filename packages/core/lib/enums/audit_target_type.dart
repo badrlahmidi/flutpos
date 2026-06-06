@@ -4,7 +4,8 @@ enum AuditTargetType {
   orderItem('ORDER_ITEM'),
   cashSession('CASH_SESSION'),
   product('PRODUCT'),
-  user('USER');
+  user('USER'),
+  securityRule('SECURITY_RULE');
 
   const AuditTargetType(this.dbValue);
 

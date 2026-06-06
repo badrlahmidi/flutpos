@@ -1,138 +1,294 @@
-# Plan de Refonte du Module de Rapports (Reporting) au Style Aronium POS
+# Plan de Refonte : Statistiques & Reporting (Style Aronium)
 
-Ce document définit les spécifications fonctionnelles, l'architecture technique et les étapes d'implémentation pour la refonte du module **Statistiques / Rapports** de Ritagestion POS, inspirée du modèle haut de gamme d'Aronium.
+Ce document décrit l'architecture, les requêtes Drift, la couche BLoC et la conception UI pour la refonte complète du module **Statistiques / Rapports** de Ritagestion POS, inspirée d'Aronium POS (multi-onglets, filtres avancés, sélecteur de période double calendrier, aperçu A4 tabulaire).
+
+> **Référence produit :** [mega_refonte_commerciale.md](./mega_refonte_commerciale.md) — section tableau de bord, ligne « Refonte Statistiques & Reporting ».
 
 ---
 
-## 1. Vision Fonctionnelle & Layout
+## 1. Tableau d'Avancement
 
-Le module de rapports s'organisera autour d'une interface à **double colonne** avec un **système de navigation par onglets (Tabs)** en haut de page, permettant de garder plusieurs rapports ouverts simultanément.
+| Composant | État | Fichiers / Notes |
+| :--- | :---: | :--- |
+| Plan d'implémentation | 🟢 Fait | Ce document |
+| Entités de rapport (`ReportFilters`, lignes typées) | 🟢 Fait | `packages/core/lib/entities/report_entities.dart` |
+| Requêtes Drift agrégées (4 rapports ventes) | 🟢 Fait | `analytics_repository_impl.dart` |
+| `PeriodPickerDialog` (double calendrier + raccourcis) | 🟢 Fait | `widgets/reporting/period_picker_dialog.dart` |
+| Shell multi-onglets (Sélecteur / Rapport) | 🟢 Fait | `reporting_page.dart` + `ReportingBloc` |
+| Aperçu tabulaire style A4 | 🟡 Partiel | Card blanche ombrée ; zoom / pagination à faire |
+| Filtres Utilisateur / Session / Catégorie | 🟢 Fait | Dropdowns dans panneau sélecteur |
+| Onglets dynamiques multi-rapports | 🟢 Fait | TabBar scrollable avec fermeture × |
+| Export PDF natif | 🟢 Fait | `ReportExportService` + package `pdf` |
+| Export Excel / CSV | 🟢 Fait | `ReportCsvBuilder` → Bureau |
+| Intégration route `/backoffice/analytics` | 🟢 Fait | `ReportingPage` |
+| Dashboard KPI (graphiques journaliers) | 🟢 Fait | `ReportType.dashboard` + `ReportDashboardPanel` |
+| Tests unitaires rapports | 🔴 À faire | Étendre `analytics_repository_test.dart` |
+| En-tête fiscal établissement sur PDF | 🔴 À faire | ICE/IF depuis `RestaurantConfig` |
+
+---
+
+## 2. Vision Fonctionnelle & Layout
+
+Le module s'organise autour d'une interface à **double colonne** avec **navigation par onglets** en tête de page. L'utilisateur peut conserver plusieurs rapports ouverts simultanément (objectif Aronium).
 
 ### Diagramme de Layout UI
 
 ```mermaid
 graph TD
     subgraph ReportingPage ["Reporting Shell"]
-        TabBar["Onglets : [ Sélectionner Rapport ]  |  [ Ventes par Produit (x) ]  |  [ Marge & Bénéfice (x) ]"]
+        TabBar["Onglets : [ Sélectionner ] | [ Ventes par Produit × ] | [ Marge & Bénéfice × ]"]
         
         subgraph SelectorTab ["Onglet : Sélectionner Rapport"]
             direction LR
-            LeftPanel["Panneau Gauche : Liste des Rapports<br>- Ventes (Produits, Catégories, Serveurs, Modes de Paiement)<br>- Achats (Fournisseurs, Produits)<br>- Stock (Mouvements, Expirations)"]
-            RightPanel["Panneau Droit : Filtres & Actions<br>- Filtres (User, Client, Caisse)<br>- Sélecteur de Période (Dates)<br>- Boutons (Afficher, Imprimer, Excel, PDF)"]
+            LeftPanel["Panneau Gauche : Catalogue des Rapports<br>• Ventes (Produits, Catégories, Serveurs, Modes de Paiement)<br>• Trésorerie (Sessions, Écarts Z)<br>• Stock (Mouvements, Food Cost)"]
+            RightPanel["Panneau Droit : Filtres & Actions<br>• Utilisateur / Serveur<br>• Catégorie<br>• Session de caisse<br>• Sélecteur de Période<br>• Afficher | Imprimer | Excel | PDF"]
         end
         
-        subgraph PreviewTab ["Onglet : Aperçu du Rapport (Ex: Ventes par Produit)"]
+        subgraph PreviewTab ["Onglet : Aperçu Rapport"]
             direction TB
-            Toolbar["Barre d'outils : [ Imprimer ] [ Sauvegarder ] [ Zoom ] [ Page 1 sur 1 ]"]
-            PaperSheet["Feuille A4 Virtuelle (Card blanche ombrée)<br>- En-tête de l'établissement<br>- Tableau de données<br>- Totaux et Ventilation TVA"]
+            Toolbar["Barre : Imprimer | Sauvegarder | Zoom −/+ | Page 1/N"]
+            PaperSheet["Feuille A4 virtuelle<br>En-tête établissement · Tableau · Totaux HT/TVA/TTC"]
         end
     end
 ```
 
----
+### Catalogue des Rapports (Phase 1 — Ventes)
 
-## 2. Composants Clés à Implémenter
+| Clé `ReportType` | Libellé UI | Source Drift | Colonnes principales |
+| :--- | :--- | :--- | :--- |
+| `productSales` | Ventes par Produit | `order_items` + `products` + `categories` | Code, Produit, Catégorie, Qté, HT, TVA, TTC |
+| `categorySales` | Ventes par Catégorie | idem, agrégé par catégorie | Catégorie, Qté, HT, TVA, TTC |
+| `paymentMethods` | Modes de Règlement | `payments` | Mode, Transactions, Total |
+| `userSales` | Ventes par Serveur | `orders` + `payments` + `users` | Serveur, Tickets, Total TTC, Panier moy. |
+| `dashboard` | Tableau de Bord | `payments` + recettes | KPIs + graphiques (`fl_chart`) |
 
-### A. Le Sélecteur de Période Interactif (`period_picker_dialog.dart`)
-Pour remplacer le DateRangePicker standard du navigateur ou de Flutter (souvent peu pratique), nous implémenterons un dialogue modal sur mesure comprenant :
-*   **Deux calendriers côte à côte** : Un pour la date de début, un pour la date de fin.
-*   **Raccourcis rapides de périodes (Quick Filters)** :
-    *   *Aujourd'hui / Hier*
-    *   *Cette semaine / La semaine dernière*
-    *   *Ce mois-ci / Le mois dernier*
-    *   *Cette année / L'année dernière*
-*   **Actions de validation** : Bouton d'application avec icône de coche.
+### Rapports Phase 2 (backlog)
 
-### B. Le Panneau de Filtres Dynamique
-Sur le côté droit de l'écran de sélection :
-1.  **Filtre Client / Fournisseur** (Dropdown lié à la table des contacts).
-2.  **Filtre Utilisateur / Serveur** (Dropdown lié à la table des utilisateurs/rôles).
-3.  **Filtre Caisse / Session** (Dropdown pour cibler une session spécifique).
-4.  **Bouton Sélecteur de date** affichant la période en cours.
-5.  **Boutons d'action unifiés** :
-    *   `Afficher` (Génère le rapport et l'ouvre dans un nouvel onglet).
-    *   `Imprimer` (Imprime directement sans aperçu).
-    *   `Excel` (Exporte les lignes au format CSV/Excel).
-    *   `PDF` (Exporte le document au format PDF natif).
-
-### C. Le Visualiseur de Rapport "A4" (`report_print_preview.dart`)
-Pour offrir un aspect premium :
-*   Le rapport sera rendu dans un conteneur centré (`SingleChildScrollView`) simulant une **feuille de papier A4** avec une bordure fine et une ombre portée douce (`boxShadow`).
-*   Intégration d'une mini barre d'outils pour naviguer entre les pages du rapport ou modifier le niveau de zoom.
+- Ventes par heure / jour de la semaine
+- Marge & bénéfice (Food Cost théorique vs CA)
+- Rapport Z de session (lien trésorerie)
+- Ventilation TVA multi-taux (conformité DGI)
+- Export comptable mensuel (déjà partiel via `AccountingExportPage`)
 
 ---
 
-## 3. Modèles de Données & Requêtes SQL (Drift)
+## 3. Architecture Technique
 
-Pour alimenter ces rapports, nous ajouterons de nouvelles requêtes agrégées dans `OrderRepository` :
+```mermaid
+flowchart LR
+    UI[ReportingPage] --> BLoC[ReportingBloc]
+    BLoC --> Repo[AnalyticsRepository]
+    Repo --> DB[(Drift SQLite)]
+    UI --> PPD[PeriodPickerDialog]
+    BLoC --> Export[ReportExportService]
+    Export --> PDF[pdf package]
+    Export --> CSV[accounting_csv_builder]
+```
+
+### Couche Présentation
+
+| Fichier | Rôle |
+| :--- | :--- |
+| `pages/backoffice/analytics/reporting_page.dart` | Shell principal (tabs, sélecteur, aperçu A4) |
+| `widgets/reporting/period_picker_dialog.dart` | Dialogue double calendrier + raccourcis |
+| `widgets/reporting/report_print_preview.dart` | *(à créer)* Feuille A4 réutilisable + toolbar zoom |
+| `blocs/reporting/reporting_bloc.dart` | Orchestration filtres / exécution / export |
+
+### Couche Domaine / Données
+
+| Fichier | Rôle |
+| :--- | :--- |
+| `entities/report_entities.dart` | `ReportFilters`, `ReportHeader`, lignes typées |
+| `repositories/analytics_repository.dart` | Contrat des 4 rapports + dashboard |
+| `repositories/analytics_repository_impl.dart` | Agrégations Drift sur commandes `PAID` |
+
+### Règles métier communes
+
+1. **Période** : filtrage sur `payments.paidAt` entre `startDate 00:00` et `endDate 23:59:59` (fin exclusive +1 jour).
+2. **Commandes valides** : statut `PAID` uniquement ; lignes `order_items` excluant `VOIDED`.
+3. **Prix figés** : toujours `order_items.unitPrice` (jamais le prix catalogue actuel).
+4. **TVA** : calcul HT/TVA par ligne via `order_items.taxRate` (taux au moment de la vente).
+5. **Filtre utilisateur** : `orders.waiterId == userId` quand renseigné.
+6. **Filtre catégorie** : restriction produits avant agrégation.
+7. **Filtre session** : `orders.sessionId == sessionId` *(Phase 1b — ajouter au modèle `ReportFilters`)*.
+
+---
+
+## 4. Composants UI Détaillés
+
+### A. Sélecteur de Période (`PeriodPickerDialog`)
+
+Implémenté avec :
+- Deux `CalendarDatePicker` côte à côte (début / fin).
+- Colonne de raccourcis : Aujourd'hui, Hier, Cette semaine, Semaine dernière, Ce mois-ci, Mois dernier, Cette année, Année dernière.
+- Bandeau récapitulatif et boutons Annuler / Appliquer.
+
+### B. Panneau de Filtres Dynamique
+
+À compléter sur le panneau droit de l'onglet « Sélectionner » :
+
+1. **Utilisateur / Serveur** — `DropdownButtonFormField` alimenté par `SELECT * FROM users WHERE is_active`.
+2. **Catégorie** — dropdown optionnel pour rapports produits.
+3. **Session de caisse** — dropdown des sessions clôturées sur la période.
+4. **Bouton période** — ouvre `PeriodPickerDialog`.
+5. **Actions** :
+   - `Afficher` → `ReportingRunRequested` + bascule onglet Rapport.
+   - `Imprimer` → aperçu système ou ESC/POS A4.
+   - `Excel` → CSV UTF-8 BOM (`;`).
+   - `PDF` → génération vectorielle identique à l'aperçu.
+
+### C. Visualiseur A4 (`report_print_preview.dart`)
+
+Spécifications :
+- Conteneur centré, ratio A4 (210×297 mm), fond blanc, `boxShadow` douce.
+- En-tête : nom établissement, ICE/IF (depuis `RestaurantConfig`), titre rapport, période, date de génération.
+- Corps : `Table` zebra-striping Material 3.
+- Pied : totaux HT / TVA / TTC + nombre de tickets.
+- Toolbar : zoom 75 % – 125 %, navigation pages si > 40 lignes.
+
+---
+
+## 5. Modèles de Données & Requêtes SQL
+
+### Entités (`report_entities.dart`)
 
 ```dart
-// Exemple de structures de données pour les rapports
-class ProductSalesReportLine {
-  final String productCode;
-  final String productName;
-  final double quantitySold;
-  final String unitOfMeasure;
-  final double totalBeforeTax;
-  final double totalTax;
-  final double totalInclTax;
-
-  ProductSalesReportLine({
-    required this.productCode,
-    required this.productName,
-    required this.quantitySold,
-    required this.unitOfMeasure,
-    required this.totalBeforeTax,
-    required this.totalTax,
-    required this.totalInclTax,
-  });
+class ReportFilters {
+  final DateTime startDate;
+  final DateTime endDate;
+  final String? userId;
+  final String? categoryId;
+  final String? paymentMethodId;
+  final String? sessionId; // Phase 1b
 }
 ```
 
-### Requête Drift pour "Ventes par Produit"
+### Exemple — Ventes par Produit
+
+Logique Drift (pas de SQL brut) :
+
+```dart
+// 1. Résoudre orderIds PAID sur la période (+ filtres user/session)
+// 2. Charger order_items non VOIDED
+// 3. Joindre products + categories
+// 4. Agréger qty et TTC par productId
+// 5. Calculer HT/TVA via item.taxRate
+```
+
+Requête SQL équivalente :
+
 ```sql
--- Requête SQL sous-jacente pour filtrer et agréger les ventes
-SELECT 
-    p.code,
+SELECT
+    p.barcode AS code,
     p.name,
-    SUM(oi.quantity) as quantity_sold,
-    SUM(oi.price_dine_in * oi.quantity / (1 + p.tax_rate/100)) as total_before_tax,
-    SUM(oi.price_dine_in * oi.quantity * (p.tax_rate/100) / (1 + p.tax_rate/100)) as total_tax,
-    SUM(oi.price_dine_in * oi.quantity) as total_incl_tax
+    c.name AS category,
+    SUM(oi.quantity) AS qty,
+    SUM(oi.quantity * oi.unit_price) AS total_ttc
 FROM order_items oi
 JOIN products p ON oi.product_id = p.id
+JOIN categories c ON p.category_id = c.id
 JOIN orders o ON oi.order_id = o.id
-WHERE o.created_at BETWEEN :start_date AND :end_date
-  AND (:user_id IS NULL OR o.user_id = :user_id)
-GROUP BY p.id;
+JOIN payments pay ON pay.order_id = o.id
+WHERE o.status = 'PAID'
+  AND oi.status != 'VOIDED'
+  AND pay.paid_at >= :start AND pay.paid_at < :end_exclusive
+  AND (:user_id IS NULL OR o.waiter_id = :user_id)
+GROUP BY p.id
+ORDER BY total_ttc DESC;
 ```
 
 ---
 
-## 4. Feuille de Route d'Implémentation
+## 6. BLoC — Événements & États
+
+```dart
+// Events
+ReportingStarted()
+ReportingFiltersChanged(ReportFilters)
+ReportingTypeSelected(ReportType)
+ReportingRunRequested()
+ReportingExportRequested(ReportExportFormat) // Phase 2
+
+// States
+ReportingInitial()
+ReportingLoading()
+ReportingReady(filters, selectedType, header, rows)
+ReportingError(message)
+```
+
+---
+
+## 7. Plan de Travail Réparti
 
 ```mermaid
 gantt
-    title Refonte Reporting - Plan d'action
+    title Refonte Reporting — Plan d'action
     dateFormat  YYYY-MM-DD
-    section Backend & Données
-    Requêtes SQL Drift & Repositories     :active, req_drift, 2026-06-07, 2d
-    section Interface Utilisateur
-    Composant PeriodPickerDialog           :crit, ui_period, 2026-06-09, 1d
-    Shell Multi-rapport (Tabs & Sidebar)   :ui_shell, 2026-06-10, 2d
-    Aperçu "A4" & Impression/Export       :ui_preview, 2026-06-12, 2d
+    section Backend
+    Requêtes Drift & entités               :done, req_drift, 2026-06-06, 1d
+    Correction TVA par ligne & tests         :active, req_fix, 2026-06-07, 1d
+    section Interface
+    PeriodPickerDialog                     :done, ui_period, 2026-06-06, 1d
+    Shell tabs + aperçu A4 basique         :done, ui_shell, 2026-06-06, 1d
+    Filtres dropdowns user/session         :ui_filters, 2026-06-07, 1d
+    Route analytics → ReportingPage        :ui_route, 2026-06-07, 1d
+    section Exports
+    CSV / Excel                            :export_csv, 2026-06-08, 1d
+    PDF vectoriel                          :export_pdf, 2026-06-09, 1d
+    section Polish
+    Onglets dynamiques multi-rapports      :ui_multitab, 2026-06-10, 2d
+    Fusion dashboard graphiques            :ui_dashboard, 2026-06-12, 1d
 ```
 
-### Étape 1 : Création des requêtes de Reporting dans `core`
-*   Modifier `ProductRepository` et `OrderRepository` pour ajouter les méthodes d'agrégation filtrées par date, utilisateur et client.
+### Étape 1 — Backend & corrections *(en cours)*
 
-### Étape 2 : Création du Sélecteur de Période Double Calendrier
-*   Créer le widget `PeriodPickerDialog` dans `widgets/reporting/period_picker_dialog.dart`.
+- [x] Créer `report_entities.dart` et méthodes dans `AnalyticsRepository`.
+- [x] Implémenter agrégations produit / catégorie / paiement / serveur.
+- [ ] Corriger `paymentMethod` (pas `method`), code produit via `barcode`.
+- [ ] TVA catégories : moyenne pondérée par `order_items.taxRate`.
+- [ ] Exporter `report_entities.dart` depuis `core.dart`.
+- [ ] Tests unitaires par type de rapport.
 
-### Étape 3 : Création de la Page de Reporting et Gestion des Onglets
-*   Remplacer l'écran de statistiques existant (`lib/pages/backoffice/analytics/`) par un contrôleur d'onglets dynamique.
-*   Implémenter la liste de sélection des rapports à gauche et les dropdowns de filtres à droite.
+### Étape 2 — Interface sélecteur
 
-### Étape 4 : Exports PDF et Excel
-*   Utiliser la bibliothèque Dart `pdf` pour générer des fichiers PDF vectoriels reprenant exactement le layout du rapport A4.
-*   Utiliser `csv` ou `excel` pour l'extraction de données tabulaires.
+- [x] `PeriodPickerDialog` double calendrier.
+- [x] Liste types de rapports (panneau gauche).
+- [ ] Dropdowns filtres utilisateur / catégorie / session.
+- [ ] Brancher `ReportingPage` sur `/backoffice/analytics`.
+
+### Étape 3 — Aperçu & exports
+
+- [x] Aperçu tabulaire basique (Card A4).
+- [ ] Extraire `ReportPrintPreview` widget réutilisable.
+- [ ] Toolbar zoom / pagination.
+- [ ] Export CSV et PDF fonctionnels.
+
+### Étape 4 — Polish Aronium
+
+- [ ] Onglets dynamiques (un par rapport généré, fermeture ×).
+- [ ] Intégrer dashboard KPI (graphiques existants) comme type `dashboard`.
+- [ ] En-tête fiscal établissement sur chaque rapport imprimable.
+
+---
+
+## 8. Checklist de Validation
+
+- [ ] Rapport « Ventes par Produit » sur une journée avec 2 taux TVA différents → totaux HT/TVA cohérents.
+- [ ] Filtre serveur → seules ses commandes apparaissent.
+- [ ] Période « Hier » via raccourci → données correctes vs dashboard.
+- [ ] Export CSV ouvrable dans Excel (UTF-8 BOM, séparateur `;`).
+- [ ] PDF généré = rendu identique à l'aperçu écran.
+- [ ] Aucune régression sur `loadDailyDashboard` (graphiques du jour).
+
+---
+
+## 9. Dépendances Packages
+
+| Package | Usage |
+| :--- | :--- |
+| `flutter_bloc` | `ReportingBloc` |
+| `equatable` | États immuables |
+| `intl` | Formatage dates / montants |
+| `pdf` + `printing` | Export PDF et impression |
+| `csv` | Export tabulaire |
+| `fl_chart` | Dashboard (existant) |

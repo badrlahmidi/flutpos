@@ -267,7 +267,7 @@ class _ProductsPageState extends State<ProductsPage> {
                     Expanded(
                       child: ListView(
                         children: [
-                          ListTile(
+                          _ProductCategoryTile(
                             leading: Icon(
                               Icons.grid_view_rounded,
                               color: _categoryFilter == null
@@ -276,7 +276,6 @@ class _ProductsPageState extends State<ProductsPage> {
                             ),
                             title: const Text('Tous les produits'),
                             selected: _categoryFilter == null,
-                            selectedTileColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
                             onTap: () {
                               setState(() {
                                 _categoryFilter = null;
@@ -287,7 +286,7 @@ class _ProductsPageState extends State<ProductsPage> {
                           ),
                           const Divider(height: 1),
                           for (final cat in _categories)
-                            ListTile(
+                            _ProductCategoryTile(
                               leading: Container(
                                 width: 12,
                                 height: 12,
@@ -298,7 +297,6 @@ class _ProductsPageState extends State<ProductsPage> {
                               ),
                               title: Text(cat.name),
                               selected: _categoryFilter == cat.id,
-                              selectedTileColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
                               onTap: () {
                                 setState(() {
                                   _categoryFilter = cat.id;
@@ -328,7 +326,8 @@ class _ProductsPageState extends State<ProductsPage> {
                           )
                         : Padding(
                             padding: const EdgeInsets.all(AppSpacing.m),
-                            child: DataTable2(
+                            child: SizedBox.expand(
+                              child: DataTable2(
                               columnSpacing: AppSpacing.m,
                               horizontalMargin: AppSpacing.m,
                               minWidth: 900,
@@ -388,33 +387,36 @@ class _ProductsPageState extends State<ProductsPage> {
                                   ),
                               ],
                             ),
+                            ),
                           ),
               ),
               if (_showEditor)
                 Container(
                   width: 480,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
                     border: Border(
                       left: BorderSide(color: theme.colorScheme.outlineVariant),
                     ),
                   ),
-                  child: _ProductEditorPanel(
-                    product: _editingProduct,
-                    categories: _categories,
-                    onCancel: () {
-                      setState(() {
-                        _showEditor = false;
-                        _editingProduct = null;
-                      });
-                    },
-                    onSaved: () {
-                      setState(() {
-                        _showEditor = false;
-                        _editingProduct = null;
-                      });
-                      _load();
-                    },
+                  child: Material(
+                    color: theme.colorScheme.surface,
+                    child: _ProductEditorPanel(
+                      product: _editingProduct,
+                      categories: _categories,
+                      onCancel: () {
+                        setState(() {
+                          _showEditor = false;
+                          _editingProduct = null;
+                        });
+                      },
+                      onSaved: () {
+                        setState(() {
+                          _showEditor = false;
+                          _editingProduct = null;
+                        });
+                        _load();
+                      },
+                    ),
                   ),
                 ),
             ],
@@ -949,6 +951,7 @@ class _ProductEditorPanelState extends State<_ProductEditorPanel> {
                 ),
                 const SizedBox(width: AppSpacing.s),
                 FilledButton.icon(
+                  style: BackofficePageHeader.compactFilledButtonStyle,
                   icon: _saving
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.save),
@@ -959,6 +962,51 @@ class _ProductEditorPanelState extends State<_ProductEditorPanel> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ProductCategoryTile extends StatelessWidget {
+  const _ProductCategoryTile({
+    required this.leading,
+    required this.title,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Widget leading;
+  final Widget title;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: selected
+          ? scheme.primaryContainer.withValues(alpha: 0.2)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              leading,
+              const SizedBox(width: 16),
+              Expanded(
+                child: DefaultTextStyle.merge(
+                  style: TextStyle(
+                    color: selected ? scheme.primary : scheme.onSurface,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                  child: title,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

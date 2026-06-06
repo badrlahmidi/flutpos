@@ -49,7 +49,7 @@ abstract final class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(
-            double.infinity,
+            AppSpacing.minTouchTarget,
             AppSpacing.minTouchTarget + AppSpacing.s,
           ),
           padding: const EdgeInsets.all(AppSpacing.m),

@@ -1,7 +1,9 @@
 import 'package:drift/drift.dart';
+import 'package:intl/intl.dart';
 
 import '../database/app_database.dart';
 import '../entities/daily_analytics_snapshot.dart';
+import '../entities/report_entities.dart';
 import '../enums/order_type.dart';
 import '../usecases/money_math.dart';
 import 'analytics_repository.dart';
@@ -10,6 +12,7 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
   AnalyticsRepositoryImpl(this._db);
 
   final AppDatabase _db;
+
 
   @override
   Future<DailyAnalyticsSnapshot> loadDailyDashboard({DateTime? day}) async {
@@ -268,4 +271,517 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
       ratioPercent: ratioPercent,
     );
   }
+
+  // ─── REPORTING METHODS ────────────────────────────────────────────────────
+
+  /// Résout les IDs de commandes PAID sur la période, filtrées par utilisateur.
+  Future<List<String>> _paidOrderIds(ReportFilters f) async {
+    final endInclusive = f.endDate.add(const Duration(days: 1));
+    final payments = await (_db.select(_db.payments)
+          ..where(
+            (p) =>
+                p.paidAt.isBiggerOrEqualValue(f.startDate) &
+                p.paidAt.isSmallerThanValue(endInclusive),
+          ))
+        .get();
+
+    if (payments.isEmpty) return [];
+
+    final orderIds = payments.map((p) => p.orderId).toSet().toList();
+    var query = _db.select(_db.orders)
+      ..where(
+        (o) =>
+            o.id.isIn(orderIds) &
+            o.status.equals('PAID'),
+      );
+
+    final orders = await query.get();
+
+    var filtered = orders;
+    if (f.userId != null) {
+      filtered = filtered.where((o) => o.waiterId == f.userId).toList();
+    }
+    if (f.sessionId != null) {
+      filtered = filtered.where((o) => o.sessionId == f.sessionId).toList();
+    }
+
+    return filtered.map((o) => o.id).toList();
+  }
+
+  Future<Set<String>> _paidOrderIdSet(ReportFilters filters) async {
+    return (await _paidOrderIds(filters)).toSet();
+  }
+
+  ReportHeader _buildHeader(
+    String title,
+    ReportFilters filters, {
+    required double totalTTC,
+    required double totalHT,
+    required double totalTax,
+    required int ticketCount,
+  }) {
+    return ReportHeader(
+      title: title,
+      generatedAt: DateTime.now(),
+      filters: filters,
+      totalTTC: totalTTC,
+      totalHT: totalHT,
+      totalTax: totalTax,
+      ticketCount: ticketCount,
+    );
+  }
+
+  @override
+  Future<({ReportHeader header, List<ProductSalesReportLine> lines})>
+      getProductSalesReport(ReportFilters filters) async {
+    final orderIds = await _paidOrderIds(filters);
+    if (orderIds.isEmpty) {
+      const emptyLines = <ProductSalesReportLine>[];
+      return (
+        header: _buildHeader(
+          'Ventes par Produit',
+          filters,
+          totalTTC: 0,
+          totalHT: 0,
+          totalTax: 0,
+          ticketCount: 0,
+        ),
+        lines: emptyLines,
+      );
+    }
+
+    var itemsQuery = _db.select(_db.orderItems)
+      ..where(
+        (i) => i.orderId.isIn(orderIds) & i.status.isNotValue('VOIDED'),
+      );
+    final items = await itemsQuery.get();
+
+    if (items.isEmpty) {
+      const emptyLines = <ProductSalesReportLine>[];
+      return (
+        header: _buildHeader(
+          'Ventes par Produit',
+          filters,
+          totalTTC: 0,
+          totalHT: 0,
+          totalTax: 0,
+          ticketCount: orderIds.length,
+        ),
+        lines: emptyLines,
+      );
+    }
+
+    final productIds = items.map((i) => i.productId).toSet().toList();
+    var prodQuery = _db.select(_db.products)
+      ..where((p) => p.id.isIn(productIds));
+    if (filters.categoryId != null) {
+      prodQuery = _db.select(_db.products)
+        ..where(
+          (p) =>
+              p.id.isIn(productIds) &
+              p.categoryId.equals(filters.categoryId!),
+        );
+    }
+    final products = await prodQuery.get();
+    final productMap = {for (final p in products) p.id: p};
+
+    final categoryIds = products
+        .map((p) => p.categoryId)
+        .whereType<String>()
+        .toSet()
+        .toList();
+    final categories = await (_db.select(_db.categories)
+          ..where((c) => c.id.isIn(categoryIds)))
+        .get();
+    final categoryMap = {for (final c in categories) c.id: c.name};
+
+    final qtyByProduct = <String, double>{};
+    final ttcByProduct = <String, double>{};
+    final htByProduct = <String, double>{};
+    final taxByProduct = <String, double>{};
+
+    for (final item in items) {
+      if (!productMap.containsKey(item.productId)) continue;
+      final lineTtc = roundMoney(item.quantity * item.unitPrice);
+      final taxRate = item.taxRate / 100;
+      final lineHt = roundMoney(lineTtc / (1 + taxRate));
+      final lineTax = roundMoney(lineTtc - lineHt);
+
+      qtyByProduct[item.productId] =
+          (qtyByProduct[item.productId] ?? 0) + item.quantity;
+      ttcByProduct[item.productId] =
+          (ttcByProduct[item.productId] ?? 0) + lineTtc;
+      htByProduct[item.productId] =
+          (htByProduct[item.productId] ?? 0) + lineHt;
+      taxByProduct[item.productId] =
+          (taxByProduct[item.productId] ?? 0) + lineTax;
+    }
+
+    double grandTTC = 0;
+    double grandHT = 0;
+    double grandTax = 0;
+
+    final lines = productMap.values.map<ProductSalesReportLine>((p) {
+      final qty = qtyByProduct[p.id] ?? 0;
+      final ttc = roundMoney(ttcByProduct[p.id] ?? 0);
+      final ht = roundMoney(htByProduct[p.id] ?? 0);
+      final tax = roundMoney(taxByProduct[p.id] ?? 0);
+      grandTTC += ttc;
+      grandHT += ht;
+      grandTax += tax;
+      return ProductSalesReportLine(
+        productId: p.id,
+        productCode: p.barcode ?? p.id.substring(0, 8),
+        productName: p.name,
+        categoryName: categoryMap[p.categoryId] ?? '—',
+        quantitySold: qty,
+        totalHT: ht,
+        totalTax: tax,
+        totalTTC: ttc,
+      );
+    }).toList()
+      ..sort((a, b) => b.totalTTC.compareTo(a.totalTTC));
+
+    return (
+      header: _buildHeader(
+        'Ventes par Produit',
+        filters,
+        totalTTC: roundMoney(grandTTC),
+        totalHT: roundMoney(grandHT),
+        totalTax: roundMoney(grandTax),
+        ticketCount: orderIds.length,
+      ),
+      lines: lines,
+    );
+  }
+
+  @override
+  Future<({ReportHeader header, List<CategorySalesReportLine> lines})>
+      getCategorySalesReport(ReportFilters filters) async {
+    final orderIds = await _paidOrderIds(filters);
+    final emptyHeader = _buildHeader(
+      'Ventes par Catégorie',
+      filters,
+      totalTTC: 0,
+      totalHT: 0,
+      totalTax: 0,
+      ticketCount: orderIds.length,
+    );
+    if (orderIds.isEmpty) {
+      const emptyLines = <CategorySalesReportLine>[];
+      return (header: emptyHeader, lines: emptyLines);
+    }
+
+    final items = await (_db.select(_db.orderItems)
+          ..where(
+            (i) => i.orderId.isIn(orderIds) & i.status.isNotValue('VOIDED'),
+          ))
+        .get();
+    if (items.isEmpty) {
+      const emptyLines = <CategorySalesReportLine>[];
+      return (header: emptyHeader, lines: emptyLines);
+    }
+
+    final productIds = items.map((i) => i.productId).toSet().toList();
+    final products = await (_db.select(_db.products)
+          ..where((p) => p.id.isIn(productIds)))
+        .get();
+    final productMap = {for (final p in products) p.id: p};
+
+    final categoryIds = products
+        .map((p) => p.categoryId)
+        .whereType<String>()
+        .toSet()
+        .toList();
+    final categories = await (_db.select(_db.categories)
+          ..where((c) => c.id.isIn(categoryIds)))
+        .get();
+    final categoryMap = {for (final c in categories) c.id: c};
+
+    final qtyByCat = <String, double>{};
+    final ttcByCat = <String, double>{};
+    final htByCat = <String, double>{};
+    final taxByCat = <String, double>{};
+
+    for (final item in items) {
+      final product = productMap[item.productId];
+      if (product == null) continue;
+      final catId = product.categoryId;
+      final lineTtc = roundMoney(item.quantity * item.unitPrice);
+      final taxRate = item.taxRate / 100;
+      final lineHt = roundMoney(lineTtc / (1 + taxRate));
+      final lineTax = roundMoney(lineTtc - lineHt);
+
+      qtyByCat[catId] = (qtyByCat[catId] ?? 0) + item.quantity;
+      ttcByCat[catId] = (ttcByCat[catId] ?? 0) + lineTtc;
+      htByCat[catId] = (htByCat[catId] ?? 0) + lineHt;
+      taxByCat[catId] = (taxByCat[catId] ?? 0) + lineTax;
+    }
+
+    double grandTTC = 0;
+    double grandHT = 0;
+    double grandTax = 0;
+
+    final lines = categoryMap.values.map<CategorySalesReportLine>((cat) {
+      final qty = qtyByCat[cat.id] ?? 0;
+      final ttc = roundMoney(ttcByCat[cat.id] ?? 0);
+      final ht = roundMoney(htByCat[cat.id] ?? 0);
+      final tax = roundMoney(taxByCat[cat.id] ?? 0);
+      grandTTC += ttc;
+      grandHT += ht;
+      grandTax += tax;
+      return CategorySalesReportLine(
+        categoryId: cat.id,
+        categoryName: cat.name,
+        quantitySold: qty,
+        totalHT: ht,
+        totalTax: tax,
+        totalTTC: ttc,
+      );
+    }).toList()
+      ..sort((a, b) => b.totalTTC.compareTo(a.totalTTC));
+
+    return (
+      header: _buildHeader(
+        'Ventes par Catégorie',
+        filters,
+        totalTTC: roundMoney(grandTTC),
+        totalHT: roundMoney(grandHT),
+        totalTax: roundMoney(grandTax),
+        ticketCount: orderIds.length,
+      ),
+      lines: lines,
+    );
+  }
+
+  @override
+  Future<({ReportHeader header, List<PaymentMethodReportLine> lines})>
+      getPaymentMethodReport(ReportFilters filters) async {
+    final endInclusive = filters.endDate.add(const Duration(days: 1));
+    var payments = await (_db.select(_db.payments)
+          ..where(
+            (p) =>
+                p.paidAt.isBiggerOrEqualValue(filters.startDate) &
+                p.paidAt.isSmallerThanValue(endInclusive),
+          ))
+        .get();
+
+    final allowedOrderIds = await _paidOrderIdSet(filters);
+    if (allowedOrderIds.isEmpty && (filters.userId != null || filters.sessionId != null)) {
+      return (
+        header: _buildHeader(
+          'Ventes par Mode de Règlement',
+          filters,
+          totalTTC: 0,
+          totalHT: 0,
+          totalTax: 0,
+          ticketCount: 0,
+        ),
+        lines: <PaymentMethodReportLine>[],
+      );
+    }
+
+    if (filters.userId != null || filters.sessionId != null) {
+      payments = payments.where((p) => allowedOrderIds.contains(p.orderId)).toList();
+    }
+
+    final orderIds = payments.map((p) => p.orderId).toSet();
+    int ticketCount = 0;
+
+    if (payments.isNotEmpty) {
+      final orders = await (_db.select(_db.orders)
+            ..where((o) => o.id.isIn(orderIds.toList()) & o.status.equals('PAID')))
+          .get();
+      ticketCount = orders.length;
+    }
+
+    final countByMethod = <String, int>{};
+    final amountByMethod = <String, double>{};
+
+    for (final p in payments) {
+      final m = p.paymentMethod;
+      countByMethod[m] = (countByMethod[m] ?? 0) + 1;
+      amountByMethod[m] = roundMoney((amountByMethod[m] ?? 0) + p.amount);
+    }
+
+    final grandTTC = roundMoney(amountByMethod.values.fold(0.0, (a, b) => a + b));
+
+    final lines = amountByMethod.entries.map<PaymentMethodReportLine>((e) {
+      return PaymentMethodReportLine(
+        method: e.key,
+        transactionCount: countByMethod[e.key] ?? 0,
+        totalAmount: e.value,
+      );
+    }).toList()
+      ..sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
+
+    return (
+      header: _buildHeader(
+        'Ventes par Mode de Règlement',
+        filters,
+        totalTTC: grandTTC,
+        totalHT: 0,
+        totalTax: 0,
+        ticketCount: ticketCount,
+      ),
+      lines: lines,
+    );
+  }
+
+  @override
+  Future<({ReportHeader header, List<UserSalesReportLine> lines})>
+      getUserSalesReport(ReportFilters filters) async {
+    final endInclusive = filters.endDate.add(const Duration(days: 1));
+    var payments = await (_db.select(_db.payments)
+          ..where(
+            (p) =>
+                p.paidAt.isBiggerOrEqualValue(filters.startDate) &
+                p.paidAt.isSmallerThanValue(endInclusive),
+          ))
+        .get();
+
+    if (payments.isEmpty) {
+      return (
+        header: _buildHeader(
+          'Ventes par Serveur',
+          filters,
+          totalTTC: 0,
+          totalHT: 0,
+          totalTax: 0,
+          ticketCount: 0,
+        ),
+        lines: <UserSalesReportLine>[],
+      );
+    }
+
+    final allowedOrderIds = await _paidOrderIdSet(filters);
+    payments = payments.where((p) => allowedOrderIds.contains(p.orderId)).toList();
+    if (payments.isEmpty) {
+      return (
+        header: _buildHeader(
+          'Ventes par Serveur',
+          filters,
+          totalTTC: 0,
+          totalHT: 0,
+          totalTax: 0,
+          ticketCount: 0,
+        ),
+        lines: <UserSalesReportLine>[],
+      );
+    }
+
+    final orderIds = payments.map((p) => p.orderId).toSet().toList();
+    final orders = await (_db.select(_db.orders)
+          ..where((o) => o.id.isIn(orderIds) & o.status.equals('PAID')))
+        .get();
+
+    final userIds = orders.map((o) => o.waiterId).toSet().toList();
+    final users = await (_db.select(_db.users)
+          ..where((u) => u.id.isIn(userIds)))
+        .get();
+    final userMap = {for (final u in users) u.id: u.name};
+
+    final paymentsByOrder = <String, double>{};
+    for (final p in payments) {
+      paymentsByOrder[p.orderId] =
+          (paymentsByOrder[p.orderId] ?? 0) + p.amount;
+    }
+
+    final ttcByUser = <String, double>{};
+    final countByUser = <String, int>{};
+
+    for (final o in orders) {
+      final amount = paymentsByOrder[o.id] ?? 0;
+      ttcByUser[o.waiterId] =
+          roundMoney((ttcByUser[o.waiterId] ?? 0) + amount);
+      countByUser[o.waiterId] = (countByUser[o.waiterId] ?? 0) + 1;
+    }
+
+    double grandTTC = 0;
+
+    final lines = ttcByUser.entries.map<UserSalesReportLine>((e) {
+      final userId = e.key;
+      final ttc = e.value;
+      final count = countByUser[userId] ?? 1;
+      grandTTC += ttc;
+      return UserSalesReportLine(
+        userId: userId,
+        userName: userMap[userId] ?? userId,
+        ticketCount: count,
+        totalTTC: ttc,
+        averageBasket: roundMoney(ttc / count),
+      );
+    }).toList()
+      ..sort((a, b) => b.totalTTC.compareTo(a.totalTTC));
+
+    return (
+      header: _buildHeader(
+        'Ventes par Serveur',
+        filters,
+        totalTTC: roundMoney(grandTTC),
+        totalHT: 0,
+        totalTax: 0,
+        ticketCount: orders.length,
+      ),
+      lines: lines,
+    );
+  }
+
+  @override
+  Future<ReportingFilterOptions> loadReportingFilterOptions({
+    DateTime? sessionPeriodStart,
+    DateTime? sessionPeriodEnd,
+  }) async {
+    final users = await (_db.select(_db.users)
+          ..where((u) => u.isActive.equals(true))
+          ..orderBy([(u) => OrderingTerm.asc(u.name)]))
+        .get();
+
+    final categories = await (_db.select(_db.categories)
+          ..orderBy([(c) => OrderingTerm.asc(c.name)]))
+        .get();
+
+    final sessionQuery = _db.select(_db.cashSessions)
+      ..orderBy([(s) => OrderingTerm.desc(s.openedAt)]);
+
+    if (sessionPeriodStart != null && sessionPeriodEnd != null) {
+      final endInclusive = sessionPeriodEnd.add(const Duration(days: 1));
+      sessionQuery.where(
+        (s) =>
+            s.openedAt.isBiggerOrEqualValue(sessionPeriodStart) &
+            s.openedAt.isSmallerThanValue(endInclusive),
+      );
+    }
+
+    final sessions = await sessionQuery.get();
+    final cashierIds = sessions.map((s) => s.cashierId).toSet().toList();
+    final cashiers = cashierIds.isEmpty
+        ? <User>[]
+        : await (_db.select(_db.users)
+              ..where((u) => u.id.isIn(cashierIds)))
+            .get();
+    final cashierNames = {for (final u in cashiers) u.id: u.name};
+
+    final sessionFmt = DateFormat('dd/MM/yyyy HH:mm', 'fr_FR');
+    return ReportingFilterOptions(
+      users: users
+          .map((u) => ReportFilterUser(id: u.id, name: u.name))
+          .toList(),
+      categories: categories
+          .map((c) => ReportFilterCategory(id: c.id, name: c.name))
+          .toList(),
+      sessions: sessions
+          .map(
+            (s) => ReportFilterSession(
+              id: s.id,
+              openedAt: s.openedAt,
+              closedAt: s.closedAt,
+              label:
+                  '${sessionFmt.format(s.openedAt)} — ${cashierNames[s.cashierId] ?? s.cashierId}${s.status == 'OPEN' ? ' (ouverte)' : ''}',
+            ),
+          )
+          .toList(),
+    );
+  }
 }
+

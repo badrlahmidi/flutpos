@@ -113,7 +113,8 @@ class _CategoriesPageState extends State<CategoriesPage> {
                       border: Border.all(color: theme.colorScheme.outlineVariant),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: DataTable2(
+                    child: SizedBox.expand(
+                      child: DataTable2(
                       columnSpacing: AppSpacing.m,
                       horizontalMargin: AppSpacing.m,
                       minWidth: 700,
@@ -181,6 +182,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                             ],
                           ),
                       ],
+                    ),
                     ),
                   ),
                 ),

@@ -148,6 +148,7 @@ class _ModifiersPageState extends State<ModifiersPage> {
                                   ),
                                   const SizedBox(width: AppSpacing.s),
                                   FilledButton.tonalIcon(
+                                    style: BackofficePageHeader.compactFilledButtonStyle,
                                     onPressed: () => _editOption(
                                       groupId: entry.group.id,
                                     ),
@@ -157,7 +158,13 @@ class _ModifiersPageState extends State<ModifiersPage> {
                                 ],
                               ),
                               const SizedBox(height: AppSpacing.s),
-                              DataTable2(
+                              SizedBox(
+                                height: 40.0 +
+                                    48.0 *
+                                        (entry.options.isEmpty
+                                            ? 1
+                                            : entry.options.length),
+                                child: DataTable2(
                                 columnSpacing: AppSpacing.m,
                                 horizontalMargin: AppSpacing.s,
                                 minWidth: 600,
@@ -222,6 +229,7 @@ class _ModifiersPageState extends State<ModifiersPage> {
                                       ],
                                     ),
                                 ],
+                              ),
                               ),
                             ],
                           ),

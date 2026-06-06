@@ -26,9 +26,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<User?> verifyManagerPin(String pin) async {
+  Future<User?> verifyManagerPin(String pin, {int minLevel = 1}) async {
     final user = await verifyPin(pin);
-    if (user != null && user.role == 'ADMIN') {
+    if (user != null && user.accessLevel >= minLevel) {
       return user;
     }
     return null;

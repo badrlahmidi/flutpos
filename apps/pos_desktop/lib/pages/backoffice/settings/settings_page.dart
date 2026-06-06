@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../../../di/service_locator.dart';
 import '../../../theme/app_spacing.dart';
 
@@ -129,6 +130,18 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.l),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.shield_outlined),
+              title: const Text('Utilisateurs & Sécurité'),
+              subtitle: const Text(
+                'Gérer les comptes, niveaux d\'accès 0-9 et permissions',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/backoffice/security'),
+            ),
           ),
           const SizedBox(height: AppSpacing.l),
           Row(

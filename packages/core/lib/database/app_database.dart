@@ -24,6 +24,7 @@ import 'tables/restaurant_config.dart';
 import 'tables/restaurant_tables.dart';
 import 'tables/sync_queue.dart';
 import 'tables/time_attendance.dart';
+import 'tables/security_rules.dart';
 import 'tables/users.dart';
 import 'tables/zones.dart';
 import 'tables/vouchers.dart';
@@ -34,6 +35,7 @@ part 'app_database.g.dart';
   tables: [
     RestaurantConfig,
     Users,
+    SecurityRules,
     Zones,
     RestaurantTables,
     Reservations,
@@ -66,7 +68,7 @@ class AppDatabase extends _$AppDatabase {
   final bool powerSyncManaged;
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -96,6 +98,18 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 7) {
             await m.addColumn(products, products.productType);
+          }
+          if (from < 8) {
+            await m.addColumn(users, users.accessLevel);
+            await m.createTable(securityRules);
+            await customStatement('''
+              UPDATE users SET access_level = CASE
+                WHEN role = 'ADMIN' THEN 9
+                WHEN role = 'MANAGER' THEN 7
+                WHEN role = 'CASHIER' THEN 3
+                ELSE 0
+              END
+            ''');
           }
         },
       );

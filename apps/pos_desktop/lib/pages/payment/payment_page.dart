@@ -9,7 +9,8 @@ import '../../blocs/payment/payment_event.dart';
 import '../../blocs/payment/payment_state.dart';
 import '../../di/service_locator.dart';
 import '../../services/print/pos_print_service.dart';
-import '../../utils/manager_auth.dart';
+import '../../../utils/security_guard.dart';
+import '../../../utils/manager_auth.dart';
 import '../../widgets/dialogs/apply_discount_dialog.dart';
 import '../../widgets/dialogs/voucher_dialog.dart';
 import '../../theme/app_spacing.dart';
@@ -46,8 +47,33 @@ class PaymentPage extends StatelessWidget {
   }
 }
 
-Future<void> _onCashDrawerPulse(BuildContext context) async {
-  final result = await sl<PosPrintService>().openCashDrawer();
+Future<void> _onCashDrawerPulse(BuildContext context, User user) async {
+  final authorized = await SecurityGuard.authorize(
+    context,
+    SecurityOperations.openCashDrawer,
+    currentUser: user,
+  );
+  if (!context.mounted) {
+    return;
+  }
+  if (authorized == null) {
+    context.read<PaymentBloc>().add(const PaymentCashDrawerHandled());
+    return;
+  }
+
+  final session = await sl<CashSessionRepository>().getOpenSessionForCashier(
+        user.id,
+      ) ??
+      await sl<CashSessionRepository>().getAnyOpenSession();
+
+  final result = session != null
+      ? await sl<PosPrintService>().openCashDrawerWithAudit(
+          userId: authorized.id,
+          sessionId: session.id,
+          reason: 'Ouverture tiroir — encaissement',
+        )
+      : await sl<PosPrintService>().openCashDrawer();
+
   if (!context.mounted) {
     return;
   }
@@ -121,7 +147,7 @@ class _PaymentView extends StatelessWidget {
               (prev is! PaymentReady || !prev.pendingCashDrawer)),
       listener: (context, state) {
         if (state is PaymentReady && state.pendingCashDrawer) {
-          _onCashDrawerPulse(context);
+          _onCashDrawerPulse(context, user);
           return;
         }
         if (state is PaymentSuccess) {

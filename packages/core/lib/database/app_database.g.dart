@@ -707,6 +707,18 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _accessLevelMeta = const VerificationMeta(
+    'accessLevel',
+  );
+  @override
+  late final GeneratedColumn<int> accessLevel = GeneratedColumn<int>(
+    'access_level',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _isActiveMeta = const VerificationMeta(
     'isActive',
   );
@@ -750,6 +762,7 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
     name,
     pinHash,
     role,
+    accessLevel,
     isActive,
     createdAt,
     updatedAt,
@@ -792,6 +805,15 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
       );
     } else if (isInserting) {
       context.missing(_roleMeta);
+    }
+    if (data.containsKey('access_level')) {
+      context.handle(
+        _accessLevelMeta,
+        accessLevel.isAcceptableOrUnknown(
+          data['access_level']!,
+          _accessLevelMeta,
+        ),
+      );
     }
     if (data.containsKey('is_active')) {
       context.handle(
@@ -836,6 +858,10 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
         DriftSqlType.string,
         data['${effectivePrefix}role'],
       )!,
+      accessLevel: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}access_level'],
+      )!,
       isActive: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_active'],
@@ -862,6 +888,7 @@ class User extends DataClass implements Insertable<User> {
   final String name;
   final String pinHash;
   final String role;
+  final int accessLevel;
   final bool isActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -870,6 +897,7 @@ class User extends DataClass implements Insertable<User> {
     required this.name,
     required this.pinHash,
     required this.role,
+    required this.accessLevel,
     required this.isActive,
     this.createdAt,
     this.updatedAt,
@@ -881,6 +909,7 @@ class User extends DataClass implements Insertable<User> {
     map['name'] = Variable<String>(name);
     map['pin_hash'] = Variable<String>(pinHash);
     map['role'] = Variable<String>(role);
+    map['access_level'] = Variable<int>(accessLevel);
     map['is_active'] = Variable<bool>(isActive);
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
@@ -897,6 +926,7 @@ class User extends DataClass implements Insertable<User> {
       name: Value(name),
       pinHash: Value(pinHash),
       role: Value(role),
+      accessLevel: Value(accessLevel),
       isActive: Value(isActive),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
@@ -917,6 +947,7 @@ class User extends DataClass implements Insertable<User> {
       name: serializer.fromJson<String>(json['name']),
       pinHash: serializer.fromJson<String>(json['pinHash']),
       role: serializer.fromJson<String>(json['role']),
+      accessLevel: serializer.fromJson<int>(json['accessLevel']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
@@ -930,6 +961,7 @@ class User extends DataClass implements Insertable<User> {
       'name': serializer.toJson<String>(name),
       'pinHash': serializer.toJson<String>(pinHash),
       'role': serializer.toJson<String>(role),
+      'accessLevel': serializer.toJson<int>(accessLevel),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
@@ -941,6 +973,7 @@ class User extends DataClass implements Insertable<User> {
     String? name,
     String? pinHash,
     String? role,
+    int? accessLevel,
     bool? isActive,
     Value<DateTime?> createdAt = const Value.absent(),
     Value<DateTime?> updatedAt = const Value.absent(),
@@ -949,6 +982,7 @@ class User extends DataClass implements Insertable<User> {
     name: name ?? this.name,
     pinHash: pinHash ?? this.pinHash,
     role: role ?? this.role,
+    accessLevel: accessLevel ?? this.accessLevel,
     isActive: isActive ?? this.isActive,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
@@ -959,6 +993,9 @@ class User extends DataClass implements Insertable<User> {
       name: data.name.present ? data.name.value : this.name,
       pinHash: data.pinHash.present ? data.pinHash.value : this.pinHash,
       role: data.role.present ? data.role.value : this.role,
+      accessLevel: data.accessLevel.present
+          ? data.accessLevel.value
+          : this.accessLevel,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -972,6 +1009,7 @@ class User extends DataClass implements Insertable<User> {
           ..write('name: $name, ')
           ..write('pinHash: $pinHash, ')
           ..write('role: $role, ')
+          ..write('accessLevel: $accessLevel, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -980,8 +1018,16 @@ class User extends DataClass implements Insertable<User> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, pinHash, role, isActive, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    pinHash,
+    role,
+    accessLevel,
+    isActive,
+    createdAt,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -990,6 +1036,7 @@ class User extends DataClass implements Insertable<User> {
           other.name == this.name &&
           other.pinHash == this.pinHash &&
           other.role == this.role &&
+          other.accessLevel == this.accessLevel &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -1000,6 +1047,7 @@ class UsersCompanion extends UpdateCompanion<User> {
   final Value<String> name;
   final Value<String> pinHash;
   final Value<String> role;
+  final Value<int> accessLevel;
   final Value<bool> isActive;
   final Value<DateTime?> createdAt;
   final Value<DateTime?> updatedAt;
@@ -1009,6 +1057,7 @@ class UsersCompanion extends UpdateCompanion<User> {
     this.name = const Value.absent(),
     this.pinHash = const Value.absent(),
     this.role = const Value.absent(),
+    this.accessLevel = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -1019,6 +1068,7 @@ class UsersCompanion extends UpdateCompanion<User> {
     required String name,
     required String pinHash,
     required String role,
+    this.accessLevel = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -1031,6 +1081,7 @@ class UsersCompanion extends UpdateCompanion<User> {
     Expression<String>? name,
     Expression<String>? pinHash,
     Expression<String>? role,
+    Expression<int>? accessLevel,
     Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -1041,6 +1092,7 @@ class UsersCompanion extends UpdateCompanion<User> {
       if (name != null) 'name': name,
       if (pinHash != null) 'pin_hash': pinHash,
       if (role != null) 'role': role,
+      if (accessLevel != null) 'access_level': accessLevel,
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -1053,6 +1105,7 @@ class UsersCompanion extends UpdateCompanion<User> {
     Value<String>? name,
     Value<String>? pinHash,
     Value<String>? role,
+    Value<int>? accessLevel,
     Value<bool>? isActive,
     Value<DateTime?>? createdAt,
     Value<DateTime?>? updatedAt,
@@ -1063,6 +1116,7 @@ class UsersCompanion extends UpdateCompanion<User> {
       name: name ?? this.name,
       pinHash: pinHash ?? this.pinHash,
       role: role ?? this.role,
+      accessLevel: accessLevel ?? this.accessLevel,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -1084,6 +1138,9 @@ class UsersCompanion extends UpdateCompanion<User> {
     }
     if (role.present) {
       map['role'] = Variable<String>(role.value);
+    }
+    if (accessLevel.present) {
+      map['access_level'] = Variable<int>(accessLevel.value);
     }
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
@@ -1107,9 +1164,390 @@ class UsersCompanion extends UpdateCompanion<User> {
           ..write('name: $name, ')
           ..write('pinHash: $pinHash, ')
           ..write('role: $role, ')
+          ..write('accessLevel: $accessLevel, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SecurityRulesTable extends SecurityRules
+    with TableInfo<$SecurityRulesTable, SecurityRule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SecurityRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _operationKeyMeta = const VerificationMeta(
+    'operationKey',
+  );
+  @override
+  late final GeneratedColumn<String> operationKey = GeneratedColumn<String>(
+    'operation_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _requiredLevelMeta = const VerificationMeta(
+    'requiredLevel',
+  );
+  @override
+  late final GeneratedColumn<int> requiredLevel = GeneratedColumn<int>(
+    'required_level',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    operationKey,
+    category,
+    label,
+    requiredLevel,
+    description,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'security_rules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SecurityRule> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('operation_key')) {
+      context.handle(
+        _operationKeyMeta,
+        operationKey.isAcceptableOrUnknown(
+          data['operation_key']!,
+          _operationKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_operationKeyMeta);
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('required_level')) {
+      context.handle(
+        _requiredLevelMeta,
+        requiredLevel.isAcceptableOrUnknown(
+          data['required_level']!,
+          _requiredLevelMeta,
+        ),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {operationKey};
+  @override
+  SecurityRule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SecurityRule(
+      operationKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}operation_key'],
+      )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      requiredLevel: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}required_level'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+    );
+  }
+
+  @override
+  $SecurityRulesTable createAlias(String alias) {
+    return $SecurityRulesTable(attachedDatabase, alias);
+  }
+}
+
+class SecurityRule extends DataClass implements Insertable<SecurityRule> {
+  final String operationKey;
+  final String category;
+  final String label;
+  final int requiredLevel;
+  final String? description;
+  const SecurityRule({
+    required this.operationKey,
+    required this.category,
+    required this.label,
+    required this.requiredLevel,
+    this.description,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['operation_key'] = Variable<String>(operationKey);
+    map['category'] = Variable<String>(category);
+    map['label'] = Variable<String>(label);
+    map['required_level'] = Variable<int>(requiredLevel);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    return map;
+  }
+
+  SecurityRulesCompanion toCompanion(bool nullToAbsent) {
+    return SecurityRulesCompanion(
+      operationKey: Value(operationKey),
+      category: Value(category),
+      label: Value(label),
+      requiredLevel: Value(requiredLevel),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+    );
+  }
+
+  factory SecurityRule.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SecurityRule(
+      operationKey: serializer.fromJson<String>(json['operationKey']),
+      category: serializer.fromJson<String>(json['category']),
+      label: serializer.fromJson<String>(json['label']),
+      requiredLevel: serializer.fromJson<int>(json['requiredLevel']),
+      description: serializer.fromJson<String?>(json['description']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'operationKey': serializer.toJson<String>(operationKey),
+      'category': serializer.toJson<String>(category),
+      'label': serializer.toJson<String>(label),
+      'requiredLevel': serializer.toJson<int>(requiredLevel),
+      'description': serializer.toJson<String?>(description),
+    };
+  }
+
+  SecurityRule copyWith({
+    String? operationKey,
+    String? category,
+    String? label,
+    int? requiredLevel,
+    Value<String?> description = const Value.absent(),
+  }) => SecurityRule(
+    operationKey: operationKey ?? this.operationKey,
+    category: category ?? this.category,
+    label: label ?? this.label,
+    requiredLevel: requiredLevel ?? this.requiredLevel,
+    description: description.present ? description.value : this.description,
+  );
+  SecurityRule copyWithCompanion(SecurityRulesCompanion data) {
+    return SecurityRule(
+      operationKey: data.operationKey.present
+          ? data.operationKey.value
+          : this.operationKey,
+      category: data.category.present ? data.category.value : this.category,
+      label: data.label.present ? data.label.value : this.label,
+      requiredLevel: data.requiredLevel.present
+          ? data.requiredLevel.value
+          : this.requiredLevel,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SecurityRule(')
+          ..write('operationKey: $operationKey, ')
+          ..write('category: $category, ')
+          ..write('label: $label, ')
+          ..write('requiredLevel: $requiredLevel, ')
+          ..write('description: $description')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(operationKey, category, label, requiredLevel, description);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SecurityRule &&
+          other.operationKey == this.operationKey &&
+          other.category == this.category &&
+          other.label == this.label &&
+          other.requiredLevel == this.requiredLevel &&
+          other.description == this.description);
+}
+
+class SecurityRulesCompanion extends UpdateCompanion<SecurityRule> {
+  final Value<String> operationKey;
+  final Value<String> category;
+  final Value<String> label;
+  final Value<int> requiredLevel;
+  final Value<String?> description;
+  final Value<int> rowid;
+  const SecurityRulesCompanion({
+    this.operationKey = const Value.absent(),
+    this.category = const Value.absent(),
+    this.label = const Value.absent(),
+    this.requiredLevel = const Value.absent(),
+    this.description = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SecurityRulesCompanion.insert({
+    required String operationKey,
+    required String category,
+    required String label,
+    this.requiredLevel = const Value.absent(),
+    this.description = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : operationKey = Value(operationKey),
+       category = Value(category),
+       label = Value(label);
+  static Insertable<SecurityRule> custom({
+    Expression<String>? operationKey,
+    Expression<String>? category,
+    Expression<String>? label,
+    Expression<int>? requiredLevel,
+    Expression<String>? description,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (operationKey != null) 'operation_key': operationKey,
+      if (category != null) 'category': category,
+      if (label != null) 'label': label,
+      if (requiredLevel != null) 'required_level': requiredLevel,
+      if (description != null) 'description': description,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SecurityRulesCompanion copyWith({
+    Value<String>? operationKey,
+    Value<String>? category,
+    Value<String>? label,
+    Value<int>? requiredLevel,
+    Value<String?>? description,
+    Value<int>? rowid,
+  }) {
+    return SecurityRulesCompanion(
+      operationKey: operationKey ?? this.operationKey,
+      category: category ?? this.category,
+      label: label ?? this.label,
+      requiredLevel: requiredLevel ?? this.requiredLevel,
+      description: description ?? this.description,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (operationKey.present) {
+      map['operation_key'] = Variable<String>(operationKey.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (requiredLevel.present) {
+      map['required_level'] = Variable<int>(requiredLevel.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SecurityRulesCompanion(')
+          ..write('operationKey: $operationKey, ')
+          ..write('category: $category, ')
+          ..write('label: $label, ')
+          ..write('requiredLevel: $requiredLevel, ')
+          ..write('description: $description, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -12612,6 +13050,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $UsersTable users = $UsersTable(this);
+  late final $SecurityRulesTable securityRules = $SecurityRulesTable(this);
   late final $ZonesTable zones = $ZonesTable(this);
   late final $RestaurantTablesTable restaurantTables = $RestaurantTablesTable(
     this,
@@ -12649,6 +13088,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     restaurantConfig,
     users,
+    securityRules,
     zones,
     restaurantTables,
     reservations,
@@ -13009,6 +13449,7 @@ typedef $$UsersTableCreateCompanionBuilder =
       required String name,
       required String pinHash,
       required String role,
+      Value<int> accessLevel,
       Value<bool> isActive,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
@@ -13020,6 +13461,7 @@ typedef $$UsersTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> pinHash,
       Value<String> role,
+      Value<int> accessLevel,
       Value<bool> isActive,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
@@ -13193,6 +13635,11 @@ class $$UsersTableFilterComposer extends Composer<_$AppDatabase, $UsersTable> {
 
   ColumnFilters<String> get role => $composableBuilder(
     column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get accessLevel => $composableBuilder(
+    column: $table.accessLevel,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13416,6 +13863,11 @@ class $$UsersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get accessLevel => $composableBuilder(
+    column: $table.accessLevel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isActive => $composableBuilder(
     column: $table.isActive,
     builder: (column) => ColumnOrderings(column),
@@ -13452,6 +13904,11 @@ class $$UsersTableAnnotationComposer
 
   GeneratedColumn<String> get role =>
       $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<int> get accessLevel => $composableBuilder(
+    column: $table.accessLevel,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
@@ -13678,6 +14135,7 @@ class $$UsersTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> pinHash = const Value.absent(),
                 Value<String> role = const Value.absent(),
+                Value<int> accessLevel = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
@@ -13687,6 +14145,7 @@ class $$UsersTableTableManager
                 name: name,
                 pinHash: pinHash,
                 role: role,
+                accessLevel: accessLevel,
                 isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -13698,6 +14157,7 @@ class $$UsersTableTableManager
                 required String name,
                 required String pinHash,
                 required String role,
+                Value<int> accessLevel = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
@@ -13707,6 +14167,7 @@ class $$UsersTableTableManager
                 name: name,
                 pinHash: pinHash,
                 role: role,
+                accessLevel: accessLevel,
                 isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -13906,6 +14367,212 @@ typedef $$UsersTableProcessedTableManager =
         bool order_item_void_authorizer,
         bool auditTrailRefs,
       })
+    >;
+typedef $$SecurityRulesTableCreateCompanionBuilder =
+    SecurityRulesCompanion Function({
+      required String operationKey,
+      required String category,
+      required String label,
+      Value<int> requiredLevel,
+      Value<String?> description,
+      Value<int> rowid,
+    });
+typedef $$SecurityRulesTableUpdateCompanionBuilder =
+    SecurityRulesCompanion Function({
+      Value<String> operationKey,
+      Value<String> category,
+      Value<String> label,
+      Value<int> requiredLevel,
+      Value<String?> description,
+      Value<int> rowid,
+    });
+
+class $$SecurityRulesTableFilterComposer
+    extends Composer<_$AppDatabase, $SecurityRulesTable> {
+  $$SecurityRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get operationKey => $composableBuilder(
+    column: $table.operationKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get requiredLevel => $composableBuilder(
+    column: $table.requiredLevel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SecurityRulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SecurityRulesTable> {
+  $$SecurityRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get operationKey => $composableBuilder(
+    column: $table.operationKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get requiredLevel => $composableBuilder(
+    column: $table.requiredLevel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SecurityRulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SecurityRulesTable> {
+  $$SecurityRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get operationKey => $composableBuilder(
+    column: $table.operationKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<int> get requiredLevel => $composableBuilder(
+    column: $table.requiredLevel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+}
+
+class $$SecurityRulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SecurityRulesTable,
+          SecurityRule,
+          $$SecurityRulesTableFilterComposer,
+          $$SecurityRulesTableOrderingComposer,
+          $$SecurityRulesTableAnnotationComposer,
+          $$SecurityRulesTableCreateCompanionBuilder,
+          $$SecurityRulesTableUpdateCompanionBuilder,
+          (
+            SecurityRule,
+            BaseReferences<_$AppDatabase, $SecurityRulesTable, SecurityRule>,
+          ),
+          SecurityRule,
+          PrefetchHooks Function()
+        > {
+  $$SecurityRulesTableTableManager(_$AppDatabase db, $SecurityRulesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SecurityRulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SecurityRulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SecurityRulesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> operationKey = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<int> requiredLevel = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SecurityRulesCompanion(
+                operationKey: operationKey,
+                category: category,
+                label: label,
+                requiredLevel: requiredLevel,
+                description: description,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String operationKey,
+                required String category,
+                required String label,
+                Value<int> requiredLevel = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SecurityRulesCompanion.insert(
+                operationKey: operationKey,
+                category: category,
+                label: label,
+                requiredLevel: requiredLevel,
+                description: description,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SecurityRulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SecurityRulesTable,
+      SecurityRule,
+      $$SecurityRulesTableFilterComposer,
+      $$SecurityRulesTableOrderingComposer,
+      $$SecurityRulesTableAnnotationComposer,
+      $$SecurityRulesTableCreateCompanionBuilder,
+      $$SecurityRulesTableUpdateCompanionBuilder,
+      (
+        SecurityRule,
+        BaseReferences<_$AppDatabase, $SecurityRulesTable, SecurityRule>,
+      ),
+      SecurityRule,
+      PrefetchHooks Function()
     >;
 typedef $$ZonesTableCreateCompanionBuilder =
     ZonesCompanion Function({
@@ -24351,6 +25018,8 @@ class $AppDatabaseManager {
       $$RestaurantConfigTableTableManager(_db, _db.restaurantConfig);
   $$UsersTableTableManager get users =>
       $$UsersTableTableManager(_db, _db.users);
+  $$SecurityRulesTableTableManager get securityRules =>
+      $$SecurityRulesTableTableManager(_db, _db.securityRules);
   $$ZonesTableTableManager get zones =>
       $$ZonesTableTableManager(_db, _db.zones);
   $$RestaurantTablesTableTableManager get restaurantTables =>

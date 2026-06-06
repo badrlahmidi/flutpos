@@ -49,8 +49,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
     context.go('/');
   }
 
-  bool _canAccessBackoffice(User user) =>
-      user.role.toLowerCase() == 'admin' || user.role.toLowerCase() == 'manager';
+  bool _canAccessBackoffice(User user) => user.accessLevel >= 7;
 
 
 

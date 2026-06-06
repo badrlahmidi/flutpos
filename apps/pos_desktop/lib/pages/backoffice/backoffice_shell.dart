@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../navigation/app_session.dart';
+import '../../utils/security_guard.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/molecules/sidebar_item.dart';
@@ -25,6 +26,7 @@ class BackofficeShell extends StatelessWidget {
     final showAnalyse = location.startsWith('/backoffice/analytics');
     final showReservations = location.startsWith('/backoffice/reservations');
     final showSettings = location.startsWith('/backoffice/settings');
+    final showSecurity = location.startsWith('/backoffice/security');
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldDark,
@@ -131,6 +133,18 @@ class BackofficeShell extends StatelessWidget {
                               ),
                             ],
                           ),
+                        if (showSecurity)
+                          _SidebarGroup(
+                            title: 'ADMINISTRATION',
+                            items: [
+                              SidebarItem(
+                                icon: Icons.shield_outlined,
+                                label: 'Utilisateurs & Sécurité',
+                                path: '/backoffice/security',
+                                currentPath: location,
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ),
@@ -147,7 +161,12 @@ class BackofficeShell extends StatelessWidget {
             ),
           ),
           VerticalDivider(width: 1, color: scheme.outline),
-          Expanded(child: child),
+          Expanded(
+            child: SecurityGate(
+              operationKey: SecurityGuard.operationForBackofficePath(location),
+              child: child,
+            ),
+          ),
         ],
       ),
     );

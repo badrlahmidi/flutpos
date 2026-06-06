@@ -103,6 +103,7 @@ class PinNumpad extends StatelessWidget {
                   ),
                 ),
                 style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 54),
                   backgroundColor: enabled && canSubmit ? Colors.transparent : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
                   shadowColor: Colors.transparent,
                   shape: RoundedRectangleBorder(

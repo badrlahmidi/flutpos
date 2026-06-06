@@ -6,6 +6,8 @@ class Users extends Table {
   TextColumn get name => text()();
   TextColumn get pinHash => text()();
   TextColumn get role => text()();
+  IntColumn get accessLevel =>
+      integer().withDefault(const Constant(0))();
   BoolColumn get isActive =>
       boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime().nullable()();

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../blocs/cart/cart_event.dart';
 import '../widgets/dialogs/apply_discount_dialog.dart';
-import 'manager_auth.dart';
+import 'security_guard.dart';
 
 /// Lance le flux remise : saisie → PIN Manager si besoin → événement panier.
 Future<bool> runCartDiscountFlow({
@@ -20,7 +20,11 @@ Future<bool> runCartDiscountFlow({
     return false;
   }
 
-  final manager = await resolveManagerAuthorization(context, currentUser);
+  final manager = await SecurityGuard.authorize(
+    context,
+    SecurityOperations.applyDiscount,
+    currentUser: currentUser,
+  );
   if (manager == null || !context.mounted) {
     return false;
   }

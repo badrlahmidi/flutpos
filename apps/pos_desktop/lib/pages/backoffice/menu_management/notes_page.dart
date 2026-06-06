@@ -87,7 +87,8 @@ class _NotesPageState extends State<NotesPage> {
                       border: Border.all(color: theme.colorScheme.outlineVariant),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: DataTable2(
+                    child: SizedBox.expand(
+                      child: DataTable2(
                       columnSpacing: AppSpacing.m,
                       horizontalMargin: AppSpacing.m,
                       minWidth: 600,
@@ -129,6 +130,7 @@ class _NotesPageState extends State<NotesPage> {
                             ],
                           ),
                       ],
+                    ),
                     ),
                   ),
                 ),

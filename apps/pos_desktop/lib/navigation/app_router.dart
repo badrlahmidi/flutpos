@@ -6,13 +6,14 @@ import '../navigation/app_session.dart';
 import 'page_transitions.dart';
 import '../pages/auth/auth_page.dart';
 import '../pages/backoffice/accounting/accounting_export_page.dart';
-import '../pages/backoffice/analytics/analytics_dashboard_page.dart';
+import '../pages/backoffice/analytics/reporting_page.dart';
 import '../pages/backoffice/backoffice_shell.dart';
 import '../pages/backoffice/menu_management/categories_page.dart';
 import '../pages/backoffice/menu_management/modifiers_page.dart';
 import '../pages/backoffice/menu_management/notes_page.dart';
 import '../pages/backoffice/menu_management/products_page.dart';
 import '../pages/backoffice/treasury/treasury_page.dart';
+import '../pages/backoffice/security/users_security_page.dart';
 import '../pages/backoffice/settings/settings_page.dart';
 import '../pages/floor_plan/floor_plan_page.dart';
 import '../pages/floor_plan/split_bill_page.dart';
@@ -201,7 +202,7 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/backoffice/analytics',
-          builder: (context, state) => const AnalyticsDashboardPage(
+          builder: (context, state) => const ReportingPage(
             embeddedInShell: true,
           ),
         ),
@@ -221,6 +222,10 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/backoffice/settings',
           builder: (context, state) => const SettingsPage(),
+        ),
+        GoRoute(
+          path: '/backoffice/security',
+          builder: (context, state) => const UsersSecurityPage(),
         ),
       ],
     ),

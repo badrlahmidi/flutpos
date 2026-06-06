@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 
 import '../services/print/pos_print_service.dart';
 import '../services/accounting_export_service.dart';
+import '../services/report_export_service.dart';
 
 /// Conteneur DI global de l'application caisse.
 final GetIt sl = GetIt.instance;
@@ -30,6 +31,20 @@ void configureDependencies(AppDatabase database) {
     () => ProductRepositoryImpl(sl<AppDatabase>()),
   );
 
+  sl.registerLazySingleton<SecurityRepository>(
+    () => SecurityRepositoryImpl(
+      sl<AppDatabase>(),
+      sl<AuditRepository>(),
+    ),
+  );
+
+  sl.registerLazySingleton<UserRepository>(
+    () => UserRepositoryImpl(
+      sl<AppDatabase>(),
+      sl<AuditRepository>(),
+    ),
+  );
+
   sl.registerLazySingleton<AnalyticsRepository>(
     () => AnalyticsRepositoryImpl(sl<AppDatabase>()),
   );
@@ -46,6 +61,10 @@ void configureDependencies(AppDatabase database) {
     () => AccountingExportService(
       repository: sl<AccountingExportRepository>(),
     ),
+  );
+
+  sl.registerLazySingleton<ReportExportService>(
+    () => ReportExportService(),
   );
 
   sl.registerLazySingleton<AuditRepository>(

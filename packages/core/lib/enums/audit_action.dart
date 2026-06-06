@@ -9,7 +9,9 @@ enum AuditAction {
   closeSession('CLOSE_SESSION'),
   resetPin('RESET_PIN'),
   priceChange('PRICE_CHANGE'),
-  loginFailed('LOGIN_FAILED');
+  loginFailed('LOGIN_FAILED'),
+  securityRuleChange('SECURITY_RULE_CHANGE'),
+  userAccessChange('USER_ACCESS_CHANGE');
 
   const AuditAction(this.dbValue);
 

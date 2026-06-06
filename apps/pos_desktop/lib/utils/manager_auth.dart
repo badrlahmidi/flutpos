@@ -1,16 +1,16 @@
-import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:core/core.dart';
 
-import '../widgets/dialogs/manager_pin_dialog.dart';
-import 'pos_permissions.dart';
+import 'security_guard.dart';
 
-/// Résout l'autorisation Manager (PIN admin) si nécessaire.
+/// Résout l'autorisation Manager (PIN) si nécessaire pour annuler un article envoyé.
 Future<User?> resolveManagerAuthorization(
   BuildContext context,
   User currentUser,
-) async {
-  if (!PosPermissions.requiresManagerPinToVoidFiredItem(currentUser)) {
-    return currentUser;
-  }
-  return showManagerPinDialog(context);
+) {
+  return SecurityGuard.authorize(
+    context,
+    SecurityOperations.voidItem,
+    currentUser: currentUser,
+  );
 }

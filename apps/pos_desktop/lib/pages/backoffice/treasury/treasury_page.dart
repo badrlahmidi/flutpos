@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../di/service_locator.dart';
 import '../../../navigation/app_router.dart';
 import '../../../theme/app_spacing.dart';
-import '../../../utils/manager_auth.dart';
+import '../../../utils/security_guard.dart';
 import '../../../widgets/atoms/pos_button.dart';
 import '../../../widgets/backoffice/backoffice_page_header.dart';
 import '../../../widgets/atoms/loading_skeleton.dart';
@@ -106,7 +106,15 @@ class _TreasuryPageState extends State<TreasuryPage> {
       return;
     }
 
-    final manager = await resolveManagerAuthorization(context, widget.user);
+    final operation = request.type == CashMovementType.payIn
+        ? SecurityOperations.cashPayIn
+        : SecurityOperations.cashPayOut;
+
+    final manager = await SecurityGuard.authorize(
+      context,
+      operation,
+      currentUser: widget.user,
+    );
     if (manager == null || !mounted) {
       return;
     }
@@ -157,6 +165,16 @@ class _TreasuryPageState extends State<TreasuryPage> {
     if (_report == null) {
       return;
     }
+
+    final authorized = await SecurityGuard.authorize(
+      context,
+      SecurityOperations.closeSession,
+      currentUser: widget.user,
+    );
+    if (authorized == null || !mounted) {
+      return;
+    }
+
     final router = GoRouter.of(context);
     final embedded = widget.embeddedInShell;
     final closed = await router.push<bool>(

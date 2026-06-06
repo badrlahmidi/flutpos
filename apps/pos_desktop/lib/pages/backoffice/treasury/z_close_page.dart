@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../utils/security_guard.dart';
 import '../../../di/service_locator.dart';
 import '../../../services/print/pos_print_service.dart';
 import '../../../theme/app_spacing.dart';
@@ -69,8 +70,18 @@ class _ZClosePageState extends State<ZClosePage> {
     setState(() => _closing = true);
 
     try {
+      final authorized = await SecurityGuard.authorize(
+        context,
+        SecurityOperations.closeSession,
+        currentUser: widget.user,
+      );
+      if (authorized == null || !mounted) {
+        setState(() => _closing = false);
+        return;
+      }
+
       final session = await sl<CashSessionRepository>().closeSession(
-        userId: widget.user.id,
+        userId: authorized.id,
         sessionId: widget.report.session.id,
         closingBalance: roundMoney(counted),
         expectedBalance: expected,
