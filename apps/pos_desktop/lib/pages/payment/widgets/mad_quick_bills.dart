@@ -16,19 +16,20 @@ class MadQuickBills extends StatelessWidget {
 
   static const List<double> bills = [200, 100, 50, 20, 10];
 
-  static Color _colorForBill(double bill) {
+  static Color _colorForBill(bool isDark, double bill) {
     return switch (bill.toInt()) {
-      200 => AppColors.accentOrange,
-      100 => AppColors.accentPurple,
-      50 => AppColors.accentBlue,
-      20 => AppColors.accentGreen,
-      _ => AppColors.textMuted,
+      200 => isDark ? AppColors.accentOrange : const Color(0xFFEA580C),
+      100 => isDark ? AppColors.accentPurple : const Color(0xFF6D28D9),
+      50 => isDark ? AppColors.accentBlue : AppColors.primary,
+      20 => isDark ? AppColors.accentGreen : const Color(0xFF16A34A),
+      _ => isDark ? AppColors.textMuted : const Color(0xFF64748B),
     };
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Wrap(
       spacing: AppSpacing.s,
@@ -36,7 +37,7 @@ class MadQuickBills extends StatelessWidget {
       children: [
         for (final bill in bills)
           Material(
-            color: _colorForBill(bill).withValues(alpha: 0.15),
+            color: _colorForBill(isDark, bill).withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(AppSpacing.s + 4),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -48,13 +49,13 @@ class MadQuickBills extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(AppSpacing.s + 4),
                   border: Border.all(
-                    color: _colorForBill(bill).withValues(alpha: 0.5),
+                    color: _colorForBill(isDark, bill).withValues(alpha: 0.5),
                   ),
                 ),
                 child: Text(
                   '${bill.toInt()} DH',
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: _colorForBill(bill),
+                    color: _colorForBill(isDark, bill),
                     fontWeight: FontWeight.w700,
                   ),
                 ),

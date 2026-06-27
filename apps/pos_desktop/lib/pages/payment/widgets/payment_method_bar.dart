@@ -39,7 +39,7 @@ class PaymentMethodBar extends StatelessWidget {
           _MethodTile(
             label: method.label,
             icon: _iconFor(method),
-            accent: _accentFor(method),
+            accent: _accentFor(context, method),
             onTap: enabled ? () => onMethodPressed(method) : null,
             theme: theme,
           ),
@@ -60,14 +60,15 @@ class PaymentMethodBar extends StatelessWidget {
     };
   }
 
-  Color _accentFor(PaymentMethod method) {
+  Color _accentFor(BuildContext context, PaymentMethod method) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return switch (method) {
-      PaymentMethod.cash => AppColors.accentGreen,
-      PaymentMethod.tpe => AppColors.accentBlue,
-      PaymentMethod.card => AppColors.accentBlue,
-      PaymentMethod.cheque => AppColors.accentPurple,
-      PaymentMethod.voucher => AppColors.accentOrange,
-      PaymentMethod.employeeMeal => AppColors.textMuted,
+      PaymentMethod.cash => isDark ? AppColors.accentGreen : const Color(0xFF16A34A),
+      PaymentMethod.tpe => isDark ? AppColors.accentBlue : AppColors.primary,
+      PaymentMethod.card => isDark ? AppColors.accentBlue : AppColors.primary,
+      PaymentMethod.cheque => isDark ? AppColors.accentPurple : const Color(0xFF6D28D9),
+      PaymentMethod.voucher => isDark ? AppColors.accentOrange : const Color(0xFFEA580C),
+      PaymentMethod.employeeMeal => isDark ? AppColors.textMuted : const Color(0xFF64748B),
     };
   }
 }
@@ -104,7 +105,9 @@ class _MethodTileState extends State<_MethodTile> {
       child: Material(
         color: _hovered
             ? widget.accent.withValues(alpha: 0.2)
-            : AppColors.surfaceElevated,
+            : (scheme.brightness == Brightness.dark
+                ? AppColors.surfaceElevated
+                : scheme.surfaceContainer),
         borderRadius: BorderRadius.circular(AppSpacing.l),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

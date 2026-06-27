@@ -82,7 +82,9 @@ class AmountNumpad extends StatelessWidget {
       button: true,
       label: tooltip ?? label,
       child: Material(
-        color: AppColors.surfaceElevated,
+        color: scheme.brightness == Brightness.dark
+            ? AppColors.surfaceElevated
+            : scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(AppSpacing.s + 4),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
