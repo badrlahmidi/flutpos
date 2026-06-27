@@ -141,7 +141,7 @@ class _CartPanelState extends State<CartPanel> {
       curve: Curves.easeOutBack,
       alignment: Alignment.centerRight,
       child: Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: PosDesignTokens.cardBackground,
         border: Border(
           left: BorderSide(color: PosDesignTokens.borderLight),
@@ -161,7 +161,7 @@ class _CartPanelState extends State<CartPanel> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 widget.deliveryLabel!,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   color: PosDesignTokens.primaryBlue,
                 ),
@@ -186,7 +186,7 @@ class _CartPanelState extends State<CartPanel> {
                     label: const Text('Client (optionnel)'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: PosDesignTokens.borderLight),
+                      side: BorderSide(color: PosDesignTokens.borderLight),
                     ),
                   ),
                 ),
@@ -209,7 +209,7 @@ class _CartPanelState extends State<CartPanel> {
             ),
           ),
           if (widget.isProforma)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(12),
               child: Text(
                 'Proforma — ajout bloqué',
@@ -316,7 +316,7 @@ class _Header extends StatelessWidget {
             backgroundColor: PosDesignTokens.primaryBlue.withValues(alpha: 0.12),
             child: Text(
               userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-              style: const TextStyle(
+              style: TextStyle(
                 color: PosDesignTokens.primaryBlue,
                 fontWeight: FontWeight.w700,
               ),
@@ -348,7 +348,7 @@ class _Header extends StatelessWidget {
                       ),
                       child: Text(
                         orderTypeLabel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: PosDesignTokens.primaryBlue,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -358,12 +358,12 @@ class _Header extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       tableLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: PosDesignTokens.textMuted,
                         fontSize: 12,
                       ),
                     ),
-                    const Icon(Icons.expand_more, size: 16, color: PosDesignTokens.textMuted),
+                    Icon(Icons.expand_more, size: 16, color: PosDesignTokens.textMuted),
                   ],
                 ),
               ],
@@ -453,7 +453,7 @@ class _CartFooter extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'TOTAL',
                   style: TextStyle(
                     fontSize: 13,
@@ -541,7 +541,7 @@ class _PayButton extends StatelessWidget {
           height: 64,
           decoration: BoxDecoration(
             gradient: onPressed != null
-                ? const LinearGradient(
+                ? LinearGradient(
                     colors: [
                       PosDesignTokens.stockGreen,
                       Color(0xFF22C55E),
@@ -666,7 +666,7 @@ class _TotalLine extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: PosDesignTokens.textMuted)),
+        Text(label, style: TextStyle(color: PosDesignTokens.textMuted)),
         Row(
           children: [
             Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -696,7 +696,7 @@ class _SecondaryAction extends StatelessWidget {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        side: const BorderSide(color: PosDesignTokens.borderLight),
+        side: BorderSide(color: PosDesignTokens.borderLight),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
@@ -746,7 +746,7 @@ class _EmptyCart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

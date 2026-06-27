@@ -63,72 +63,76 @@ class FloorPlanTableTile extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.s),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    snapshot.table.name,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: foreground,
-                      fontWeight: FontWeight.bold,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      snapshot.table.name,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: foreground,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    '${snapshot.table.capacity} pl.',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: foreground.withValues(alpha: 0.85),
-                    ),
-                  ),
-                  if (timer != null) ...[
                     const SizedBox(height: AppSpacing.xs),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
+                    Text(
+                      '${snapshot.table.capacity} pl.',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: foreground.withValues(alpha: 0.85),
                       ),
-                      decoration: BoxDecoration(
-                        color: borderColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        timer,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: borderColor,
-                          fontWeight: FontWeight.w700,
+                    ),
+                    if (timer != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: borderColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          timer,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: borderColor,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                  if (reservation != null && snapshot.activeOrder == null) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      reservation.customerName,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: foreground,
-                        fontWeight: FontWeight.w600,
+                    ],
+                    if (reservation != null && snapshot.activeOrder == null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        reservation.customerName,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: foreground,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      _formatReservationTime(reservation.reservedAt),
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: foreground.withValues(alpha: 0.9),
+                      Text(
+                        _formatReservationTime(reservation.reservedAt),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: foreground.withValues(alpha: 0.9),
+                        ),
                       ),
-                    ),
-                  ],
-                  if (total != null && total > 0) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      '${total.toStringAsFixed(0)} DH',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: foreground,
-                        fontWeight: FontWeight.w600,
+                    ],
+                    if (total != null && total > 0) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        '${total.toStringAsFixed(0)} DH',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: foreground,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

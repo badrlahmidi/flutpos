@@ -107,7 +107,9 @@ class _ReportingViewState extends State<_ReportingView>
         final controller = _tabController!;
 
         return Scaffold(
-          backgroundColor: AppColors.scaffoldDark,
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? AppColors.scaffoldDark
+              : scheme.surfaceContainerLow,
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

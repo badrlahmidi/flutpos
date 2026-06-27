@@ -41,7 +41,7 @@ class PosTopBar extends StatelessWidget {
       height: 64,
       decoration: BoxDecoration(
         color: PosDesignTokens.cardBackground,
-        border: const Border(bottom: BorderSide(color: PosDesignTokens.borderLight)),
+        border: Border(bottom: BorderSide(color: PosDesignTokens.borderLight)),
         boxShadow: PosDesignTokens.cardShadow,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -53,7 +53,7 @@ class PosTopBar extends StatelessWidget {
               onPressed: onHome,
               icon: Icon(Icons.home_outlined, color: PosDesignTokens.primaryBlue),
             ),
-          const Icon(Icons.storefront, color: PosDesignTokens.primaryBlue, size: 28),
+          Icon(Icons.storefront, color: PosDesignTokens.primaryBlue, size: 28),
           const SizedBox(width: 10),
           const Text(
             'RITAGESTION POS',

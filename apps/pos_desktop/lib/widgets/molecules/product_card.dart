@@ -55,7 +55,7 @@ class ProductCard extends StatelessWidget {
                 child: Stack(
                   children: [
                     ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
+                      borderRadius: BorderRadius.vertical(
                         top: Radius.circular(PosDesignTokens.radiusLg),
                       ),
                       child: _ProductImage(imageUrl: imageUrl),
@@ -136,7 +136,7 @@ class ProductCard extends StatelessWidget {
                         description ?? subtitle ?? ' ',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: PosDesignTokens.textMuted,
                         ),
@@ -161,7 +161,7 @@ class ProductCard extends StatelessWidget {
                                 color: PosDesignTokens.stockGreenBg,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'En stock',
                                 style: TextStyle(
                                   color: PosDesignTokens.stockGreen,
@@ -181,7 +181,7 @@ class ProductCard extends StatelessWidget {
                                     .withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Rupture',
                                 style: TextStyle(
                                   color: PosDesignTokens.offlineRed,
@@ -243,7 +243,7 @@ class _PlaceholderImage extends StatelessWidget {
           ],
         ),
       ),
-      child: const Icon(
+      child: Icon(
         Icons.restaurant,
         size: 40,
         color: PosDesignTokens.textMuted,

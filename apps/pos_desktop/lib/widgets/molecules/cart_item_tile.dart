@@ -60,7 +60,7 @@ class CartItemTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${_formatQty(qty)} x ${PriceFormatter.format(unit)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: PosDesignTokens.textMuted,
                     ),
@@ -69,7 +69,7 @@ class CartItemTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '- ${line.modifierSummary}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         color: PosDesignTokens.textMuted,
                       ),
@@ -80,14 +80,14 @@ class CartItemTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       line.orderItem.customNotes!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         color: PosDesignTokens.offlineRed,
                       ),
                     ),
                   ],
                   if (sentToKitchen)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(top: 4),
                       child: Text(
                         'Envoyé cuisine',
@@ -109,7 +109,7 @@ class CartItemTile extends StatelessWidget {
                         ),
                         child: Text(
                           '${CourseHelpers.emojiForCourse(line.orderItem.courseNumber)} ${CourseHelpers.labelForCourse(line.orderItem.courseNumber)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                             color: PosDesignTokens.primaryBlue,
@@ -140,7 +140,7 @@ class CartItemTile extends StatelessWidget {
               children: [
                 Text(
                   PriceFormatter.format(line.lineSubtotal),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w800,
                     color: PosDesignTokens.primaryBlue,
                   ),
@@ -175,7 +175,7 @@ class CartItemTile extends StatelessWidget {
                               Text(CourseHelpers.labelForCourse(c)),
                               if (line.orderItem.courseNumber == c) ...[
                                 const Spacer(),
-                                const Icon(Icons.check, size: 16, color: PosDesignTokens.primaryBlue),
+                                Icon(Icons.check, size: 16, color: PosDesignTokens.primaryBlue),
                               ],
                             ],
                           ),
@@ -209,7 +209,7 @@ class _Thumb extends StatelessWidget {
       width: 52,
       height: 52,
       color: PosDesignTokens.shellBackground,
-      child: const Icon(Icons.restaurant, size: 22, color: PosDesignTokens.textMuted),
+      child: Icon(Icons.restaurant, size: 22, color: PosDesignTokens.textMuted),
     );
   }
 }

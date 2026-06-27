@@ -84,6 +84,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final isAdmin = _canAccessBackoffice(widget.user);
 
     final allTiles = <_MenuTileData>[
@@ -162,20 +163,25 @@ class _MainMenuPageState extends State<MainMenuPage> {
     ].where((t) => t.visible).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldDark,
+      backgroundColor: isDark ? AppColors.scaffoldDark : scheme.surfaceContainerLow,
       body: Stack(
         children: [
           // Subtly glowing radial gradient background
           Positioned.fill(
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: Alignment(0, 0),
+                  center: const Alignment(0, 0),
                   radius: 1.3,
-                  colors: [
-                    Color(0xFF1E2638),
-                    Color(0xFF0F1117),
-                  ],
+                  colors: isDark
+                      ? const [
+                          Color(0xFF1E2638),
+                          Color(0xFF0F1117),
+                        ]
+                      : [
+                          scheme.surfaceContainerLow,
+                          scheme.surface,
+                        ],
                 ),
               ),
             ),

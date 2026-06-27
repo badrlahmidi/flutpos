@@ -39,7 +39,9 @@ class _UsersSecurityPageState extends State<UsersSecurityPage>
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldDark,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.scaffoldDark
+          : scheme.surfaceContainerLow,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

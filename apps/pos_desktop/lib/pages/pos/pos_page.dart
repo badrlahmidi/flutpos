@@ -493,17 +493,28 @@ class _PosViewState extends State<_PosView> with WindowListener {
         body: Stack(
           children: [
             Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment(0.7, -0.6),
-                    radius: 1.5,
-                    colors: [
-                      Color(0xFF1E2638),
-                      Color(0xFF0F1117),
-                    ],
-                  ),
-                ),
+              child: Builder(
+                builder: (context) {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  final scheme = Theme.of(context).colorScheme;
+                  return Container(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: const Alignment(0.7, -0.6),
+                        radius: 1.5,
+                        colors: isDark
+                            ? const [
+                                Color(0xFF1E2638),
+                                Color(0xFF0F1117),
+                              ]
+                            : [
+                                scheme.surfaceContainerLow,
+                                scheme.surface,
+                              ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             Positioned.fill(

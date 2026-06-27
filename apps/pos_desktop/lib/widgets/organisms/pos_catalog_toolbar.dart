@@ -33,18 +33,18 @@ class PosCatalogToolbar extends StatelessWidget {
                   controller: searchController,
                   decoration: InputDecoration(
                     hintText: 'Rechercher un produit...',
-                    hintStyle: const TextStyle(color: PosDesignTokens.textMuted),
-                    prefixIcon: const Icon(Icons.search, color: PosDesignTokens.textMuted),
+                    hintStyle: TextStyle(color: PosDesignTokens.textMuted),
+                    prefixIcon: Icon(Icons.search, color: PosDesignTokens.textMuted),
                     filled: true,
                     fillColor: PosDesignTokens.cardBackground,
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(PosDesignTokens.radiusLg),
-                      borderSide: const BorderSide(color: PosDesignTokens.borderLight),
+                      borderSide: BorderSide(color: PosDesignTokens.borderLight),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(PosDesignTokens.radiusLg),
-                      borderSide: const BorderSide(color: PosDesignTokens.borderLight),
+                      borderSide: BorderSide(color: PosDesignTokens.borderLight),
                     ),
                   ),
                 ),
@@ -59,7 +59,7 @@ class PosCatalogToolbar extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(PosDesignTokens.radiusLg),
                   ),
-                  side: const BorderSide(color: PosDesignTokens.borderLight),
+                  side: BorderSide(color: PosDesignTokens.borderLight),
                 ),
               ),
             ],

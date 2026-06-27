@@ -29,7 +29,9 @@ class BackofficeShell extends StatelessWidget {
     final showSecurity = location.startsWith('/backoffice/security');
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldDark,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.scaffoldDark
+          : scheme.surfaceContainerLow,
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

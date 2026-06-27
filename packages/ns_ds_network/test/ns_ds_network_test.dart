@@ -6,7 +6,7 @@ void main() {
     test('aligne le protocole RitajPOS', () {
       expect(NsDsNetworkConstants.serviceType, '_ritajpos._tcp');
       expect(NsDsNetworkConstants.defaultServiceName, 'Caisse Principale');
-      expect(NsDsNetworkConstants.defaultPort, 8080);
+      expect(NsDsNetworkConstants.defaultPort, 8085);
     });
   });
 

@@ -2,6 +2,6 @@
 abstract final class NsDsNetworkConstants {
   static const serviceType = '_ritajpos._tcp';
   static const defaultServiceName = 'Caisse Principale';
-  static const defaultPort = 8080;
+  static const defaultPort = 8085;
   static const defaultDiscoveryTimeout = Duration(seconds: 5);
 }

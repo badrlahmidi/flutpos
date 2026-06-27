@@ -69,16 +69,25 @@ class _AuthViewState extends State<_AuthView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       body: DecoratedBox(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: RadialGradient(
-            center: Alignment(0, -0.3),
+            center: const Alignment(0, -0.3),
             radius: 1.2,
-            colors: [
-              AppColors.scaffoldDark,
-              Color(0xFF0A0C12),
-            ],
+            colors: isDark
+                ? const [
+                    AppColors.scaffoldDark,
+                    Color(0xFF0A0C12),
+                  ]
+                : [
+                    scheme.surfaceContainerLow,
+                    scheme.surface,
+                  ],
           ),
         ),
         child: SafeArea(

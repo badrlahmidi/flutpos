@@ -23,7 +23,7 @@ class CategoryBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: PosDesignTokens.cardBackground,
         border: Border(
           right: BorderSide(color: PosDesignTokens.borderLight),
@@ -32,7 +32,7 @@ class CategoryBar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
             child: Text(
               'CATÉGORIES',
@@ -75,7 +75,7 @@ class CategoryBar extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(PosDesignTokens.radiusMd),
                   ),
-                  side: const BorderSide(color: PosDesignTokens.borderLight),
+                  side: BorderSide(color: PosDesignTokens.borderLight),
                 ),
               ),
             ),
@@ -124,7 +124,7 @@ class _CategoryTile extends StatelessWidget {
                   height: 56,
                   decoration: BoxDecoration(
                     color: PosDesignTokens.primaryBlue,
-                    borderRadius: const BorderRadius.horizontal(
+                    borderRadius: BorderRadius.horizontal(
                       left: Radius.circular(PosDesignTokens.radiusLg),
                     ),
                   ),
