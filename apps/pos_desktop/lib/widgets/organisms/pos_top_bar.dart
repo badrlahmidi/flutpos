@@ -21,6 +21,8 @@ class PosTopBar extends StatelessWidget {
     required this.onLanguageToggle,
     required this.onServiceModeChanged,
     this.onHome,
+    this.homeIcon,
+    this.homeTooltip,
   });
 
   final bool lanOnline;
@@ -34,6 +36,8 @@ class PosTopBar extends StatelessWidget {
   final VoidCallback onLanguageToggle;
   final ValueChanged<ServiceMode> onServiceModeChanged;
   final VoidCallback? onHome;
+  final IconData? homeIcon;
+  final String? homeTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +53,9 @@ class PosTopBar extends StatelessWidget {
         children: [
           if (onHome != null)
             IconButton(
-              tooltip: 'Menu principal',
+              tooltip: homeTooltip ?? 'Menu principal',
               onPressed: onHome,
-              icon: Icon(Icons.home_outlined, color: PosDesignTokens.primaryBlue),
+              icon: Icon(homeIcon ?? Icons.home_outlined, color: PosDesignTokens.primaryBlue),
             ),
           Icon(Icons.storefront, color: PosDesignTokens.primaryBlue, size: 28),
           const SizedBox(width: 10),

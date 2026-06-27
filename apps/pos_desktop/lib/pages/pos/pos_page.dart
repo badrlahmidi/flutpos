@@ -292,6 +292,15 @@ class _PosViewState extends State<_PosView> with WindowListener {
         isCourseClaim: result.courseNumber > 1,
       ),
     );
+
+    // Retour automatique aux tables après commande en cuisine si c'est une table
+    if (widget.tableLabel != null && widget.tableLabel!.isNotEmpty) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          context.go('/floor');
+        }
+      });
+    }
   }
 
   Future<void> _onProforma(CompleteOrder order) async {
@@ -361,6 +370,15 @@ class _PosViewState extends State<_PosView> with WindowListener {
         duration: Duration(seconds: 2),
       ),
     );
+
+    // Retour automatique aux tables après paiement si c'est une table
+    if (widget.tableLabel != null && widget.tableLabel!.isNotEmpty) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          context.go('/floor');
+        }
+      });
+    }
   }
 
   Future<void> _onSendToKitchen(CompleteOrder order) async {
@@ -525,7 +543,15 @@ class _PosViewState extends State<_PosView> with WindowListener {
                     lanOnline: server.isRunning,
                     clientCount: server.clientRegistry.count,
                     workspace: _workspace,
-                    onHome: () => context.go('/menu'),
+                    onHome: () => widget.tableLabel != null
+                        ? context.go('/floor')
+                        : context.go('/menu'),
+                    homeIcon: widget.tableLabel != null
+                        ? Icons.arrow_back_rounded
+                        : Icons.home_outlined,
+                    homeTooltip: widget.tableLabel != null
+                        ? 'Retour aux tables'
+                        : 'Menu principal',
                     onWorkspaceSelected: (w) => setState(() => _workspace = w),
                     onSync: () {
                       context.read<CatalogBloc>().add(const CatalogStarted());
