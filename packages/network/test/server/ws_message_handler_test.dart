@@ -1,4 +1,3 @@
-import 'package:core/core.dart';
 import 'package:network/protocol/event_envelope.dart';
 import 'package:network/protocol/ws_action.dart';
 import 'package:network/server/ws_message_handler.dart';

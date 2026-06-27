@@ -1,7 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
-import 'package:network/network.dart' hide ConnectionState;
 import 'package:network/client/connection_state.dart' as net;
 
 import '../di/app_bootstrap.dart';

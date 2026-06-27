@@ -4,11 +4,10 @@
 
 **AVANT toute génération de code, toute proposition de solution, ou toute modification de fichier, l'agent IA DOIT impérativement :**
 
-1. Lire et analyser l'intégralité du dossier `docs/architecture/` situé à la racine du projet.
-2. S'assurer que le code généré respecte strictement les décisions documentées dans les 12 fichiers suivants :
-   - `docs/architecture/00_MEGA_PROMPT_START.md` — Prompt de démarrage et instructions sprint par sprint.
+1. Lire `ROADMAP.md` à la racine (source unique de vérité : audit, phases, état actuel).
+2. Lire et analyser le dossier `docs/architecture/` (10 fichiers de spécifications techniques) :
    - `docs/architecture/01_project_context_and_stack.md` — Stack technique, versions, et règles d'architecture.
-   - `docs/architecture/02_database_schema.md` — 22 tables Drift/SQLite avec relations et règles de calcul.
+   - `docs/architecture/02_database_schema.md` — 26 tables Drift/SQLite avec relations et règles de calcul.
    - `docs/architecture/03_network_protocol.md` — Protocole réseau WebSocket/mDNS.
    - `docs/architecture/04_business_scenarios_qa.md` — 50 scénarios métier restauration (Product Backlog).
    - `docs/architecture/05_design_system.md` — Design system, couleurs, espacements, règles UX Fat-Finger.
@@ -17,7 +16,8 @@
    - `docs/architecture/08_error_handling_strategy.md` — Résilience par couche, recovery, mode dégradé.
    - `docs/architecture/09_testing_strategy.md` — Pyramide de tests, coverage, BLoC testing.
    - `docs/architecture/10_i18n_and_localization.md` — Bilingue FR/AR, devise MAD, contenu légal Maroc.
-   - `docs/architecture/11_roadmap_and_business.md` — Roadmap 6 sprints, conseils métier marché marocain.
+3. Consulter `docs/mega_refonte_commerciale.md` pour la vision produit 360°.
+4. Consulter les `docs/*_plan.md` pour les plans d'implémentation par module.
 
 ## Règles Générales
 

@@ -7,6 +7,7 @@ final testUser = User(
   name: 'Test Caissier',
   pinHash: 'fakehash',
   role: 'CASHIER',
+  accessLevel: 0,
   isActive: true,
   createdAt: DateTime(2026),
 );
