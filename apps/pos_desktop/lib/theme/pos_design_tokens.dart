@@ -49,14 +49,23 @@ abstract final class PosDesignTokens {
   static const radiusMd = 12.0;
   static const radiusLg = 16.0;
 
-  static List<Color> get categoryAccentColors => const [
-        AppColors.accentGreen,
-        AppColors.accentOrange,
-        AppColors.accentBlue,
-        Color(0xFFEC4899),
-        Color(0xFFEAB308),
-        AppColors.accentPurple,
-      ];
+  static List<Color> get categoryAccentColors => isDark
+      ? const [
+          AppColors.accentGreen,
+          AppColors.accentOrange,
+          AppColors.accentBlue,
+          Color(0xFFEC4899),
+          Color(0xFFEAB308),
+          AppColors.accentPurple,
+        ]
+      : const [
+          Color(0xFF0F766E),
+          Color(0xFFC2410C),
+          Color(0xFF1D4ED8),
+          Color(0xFFBE185D),
+          Color(0xFFB45309),
+          Color(0xFF6D28D9),
+        ];
 
   static Color categoryAccent(int index) =>
       categoryAccentColors[index % categoryAccentColors.length];

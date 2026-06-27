@@ -44,14 +44,20 @@ class SidebarItem extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppSpacing.s),
-              border: selected
-                  ? Border(
-                      left: BorderSide(color: scheme.primary, width: 3),
-                    )
-                  : null,
             ),
             child: Row(
               children: [
+                if (selected) ...[
+                  Container(
+                    width: 3,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: scheme.primary,
+                      borderRadius: BorderRadius.circular(1.5),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 Icon(
                   icon,
                   size: 20,

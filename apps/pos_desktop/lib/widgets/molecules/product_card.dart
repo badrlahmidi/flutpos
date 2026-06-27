@@ -94,7 +94,7 @@ class ProductCard extends StatelessWidget {
                       top: 8,
                       right: 8,
                       child: Material(
-                        color: Colors.white.withValues(alpha: 0.92),
+                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
                         shape: const CircleBorder(),
                         child: InkWell(
                           onTap: onFavoriteToggle,

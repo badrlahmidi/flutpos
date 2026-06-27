@@ -85,13 +85,17 @@ class PosTopBar extends StatelessWidget {
             child: InkWell(
               onTap: onLanguageToggle,
               customBorder: const CircleBorder(),
-              child: const SizedBox(
+              child: SizedBox(
                 width: 40,
                 height: 40,
                 child: Center(
                   child: Text(
                     'AR',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ),
               ),
