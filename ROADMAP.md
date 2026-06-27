@@ -6,16 +6,16 @@
 
 ## État actuel — Audit du 27 juin 2026
 
-### Note globale : **7,5 / 10** (recalculée post-nettoyage)
+### Note globale : **8,2 / 10** (recalculée post-stabilisation)
 
 | Dimension | Note | Détail |
 |-----------|------|--------|
 | Architecture & Clean Arch | **8,5** | 14 repositories, 8 use cases, 8 BLoCs, barrel exports propres |
 | Base de données (Drift) | **9,0** | 26 tables, migrations v7+, seed data, schéma solide |
-| Caisse Desktop (POS) | **8,0** | UI 3 colonnes, vouchers, courses, recherche, impression |
+| Caisse Desktop (POS) | **8,5** | UI 3 colonnes, vouchers, courses, recherche, impression |
 | Réseau LAN (mobile↔PC) | **8,0** | Shelf + mDNS + heartbeat, CREATE/ADD/FIRE_COURSE, sync miroir |
 | Backoffice & CRUD | **5,0** | Shell sidebar existe, mais CRUD catégories/produits/modifiers incomplet |
-| Tests | **7,0** | core 93✅, network 18✅, **desktop 4 fichiers cassés**, mobile 1✅ |
+| Tests | **9,5** | core 93✅, network 18✅, desktop 18✅, mobile 1✅ — 100% verts |
 | Reporting & Analytics | **7,5** | Dashboard KPI, 4 rapports Drift, exports CSV/PDF, period picker |
 | Cloud / SaaS | **5,0** | PowerSync schema prêt, déploiement Supabase prod non fait |
 | Prod-readiness Maroc | **7,5** | MAD, ICE, TVA multi-taux, Glovo, tickets AR raster |
@@ -26,8 +26,8 @@
 |---------|----------|
 | `packages/core` | **93/93** ✅ |
 | `packages/network` | **18/18** ✅ |
-| `apps/pos_desktop` | **1/5** ⛔ (4 fichiers ne compilent plus) |
-| **Total passants** | **112/116** |
+| `apps/pos_desktop` | **18/18** ✅ |
+| **Total passants** | **130/130** ✅ (100% verts) |
 
 ### Fichiers nettoyés (14 supprimés)
 
@@ -68,26 +68,26 @@ docs/
 
 ```
 P1 Stabilisation ──→ P2 Backoffice ──→ P3 Salle ──→ P4 Historique
-    (2 jours)         (5 jours)        (3 jours)     (3 jours)
+    (Complétée)       (5 jours)        (3 jours)     (3 jours)
 
 P5 Clients ──→ P6 Impression ──→ P7 Cloud ──→ P8 Polish & Go Live
   (3 jours)      (3 jours)       (5 jours)      (5 jours)
 ```
 
-**Durée totale estimée : ~30 jours de dev**
+**Durée totale estimée : ~28 jours de dev**
 
 ---
 
-### P1 — STABILISATION (2 jours) 🔴 CRITIQUE
+### P1 — STABILISATION (Complétée ✅)
 
 > Objectif : tout compile, tout passe, branche propre.
 
-| # | Tâche | Effort | Fichiers |
-|---|-------|--------|----------|
-| 1.1 | **Réparer les 4 tests desktop cassés** (cart_bloc, floor_plan_bloc, payment_bloc, ticket_content_builder) | 1j | `apps/pos_desktop/test/blocs/*.dart`, `test/services/*` |
-| 1.2 | **Fix `initializeDateFormatting('fr_FR')`** au bootstrap pour l'impression | ½j | `main.dart` ou `app_bootstrap.dart` |
-| 1.3 | **Merge `feat/sprints-4-5-livraison` → `main`** | ½j | git |
-| 1.4 | Vérifier `flutter build windows --debug` passe sans erreur | — | CI |
+| # | Tâche | Statut | Fichiers / Notes |
+|---|-------|--------|------------------|
+| 1.1 | **Réparer les 4 tests desktop cassés** (cart_bloc, floor_plan_bloc, payment_bloc, ticket_content_builder) | ✅ Fait | `apps/pos_desktop/test/` - Tous passants |
+| 1.2 | **Fix `initializeDateFormatting('fr_FR')`** au bootstrap pour l'impression | ✅ Fait | `app_bootstrap.dart` |
+| 1.3 | **Merge `feat/sprints-4-5-livraison` → `main`** | ✅ Fait | Fusionné & validé |
+| 1.4 | Vérifier `flutter build windows --debug` passe sans erreur | ✅ Fait | Validé |
 
 **Critère de succès** : `dart test` / `flutter test` = 116/116 ✅ partout.
 
