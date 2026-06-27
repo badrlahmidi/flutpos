@@ -12,13 +12,21 @@ class ConnectionPage extends StatefulWidget {
 
 class _ConnectionPageState extends State<ConnectionPage> {
   final _client = AppBootstrap.instance.networkClient;
+  final _ipController = TextEditingController();
   bool _discovering = false;
+  bool _connectingManually = false;
   String _error = '';
 
   @override
   void initState() {
     super.initState();
     _startDiscovery();
+  }
+
+  @override
+  void dispose() {
+    _ipController.dispose();
+    super.dispose();
   }
 
   Future<void> _startDiscovery() async {
@@ -55,6 +63,34 @@ class _ConnectionPageState extends State<ConnectionPage> {
     }
   }
 
+  Future<void> _connectManually() async {
+    final ip = _ipController.text.trim();
+    if (ip.isEmpty) {
+      setState(() => _error = 'Veuillez saisir une adresse IP.');
+      return;
+    }
+    setState(() {
+      _connectingManually = true;
+      _error = '';
+    });
+    try {
+      await _client.connectManually(ip);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const TablesPage()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Échec de la connexion directe à $ip : $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _connectingManually = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,7 +99,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
         centerTitle: true,
       ),
       body: Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -86,9 +122,42 @@ class _ConnectionPageState extends State<ConnectionPage> {
                 ElevatedButton.icon(
                   onPressed: _startDiscovery,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Réessayer'),
+                  label: const Text('Réessayer la recherche'),
                 ),
-                // TODO: Ajouter un champ pour saisir l'IP manuellement
+                const SizedBox(height: 32),
+                const Divider(),
+                const SizedBox(height: 16),
+                const Text(
+                  'Ou connexion manuelle :',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: 320,
+                  child: TextField(
+                    controller: _ipController,
+                    decoration: const InputDecoration(
+                      labelText: 'Adresse IP de la caisse',
+                      hintText: 'ex: 192.168.1.100',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.computer),
+                      isDense: true,
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: _connectingManually ? null : _connectManually,
+                  icon: _connectingManually
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.link),
+                  label: const Text('Connexion directe'),
+                ),
               ],
             ],
           ),

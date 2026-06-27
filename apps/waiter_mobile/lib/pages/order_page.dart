@@ -191,6 +191,7 @@ class _OrderPageState extends State<OrderPage> {
       return;
     }
 
+    if (!mounted) return;
     final notes = await _promptNotes(context, product.name);
     if (!mounted) {
       return;

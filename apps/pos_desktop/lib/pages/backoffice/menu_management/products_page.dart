@@ -682,7 +682,7 @@ class _ProductEditorPanelState extends State<_ProductEditorPanel> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             DropdownButtonFormField<String>(
-                              value: _categoryId,
+                              initialValue: _categoryId,
                               decoration: const InputDecoration(labelText: 'Catégorie / Groupe'),
                               items: [
                                 for (final c in widget.categories)
@@ -707,7 +707,7 @@ class _ProductEditorPanelState extends State<_ProductEditorPanel> {
                             ),
                             const SizedBox(height: AppSpacing.m),
                             DropdownButtonFormField<String>(
-                              value: _productType,
+                              initialValue: _productType,
                               decoration: const InputDecoration(labelText: 'Type de Produit'),
                               items: const [
                                 DropdownMenuItem(
@@ -870,7 +870,7 @@ class _ProductEditorPanelState extends State<_ProductEditorPanel> {
                                           Expanded(
                                             flex: 3,
                                             child: DropdownButtonFormField<String>(
-                                              value: item.ingredientId,
+                                              initialValue: item.ingredientId,
                                               decoration: const InputDecoration(
                                                 contentPadding: EdgeInsets.symmetric(
                                                   horizontal: AppSpacing.s,

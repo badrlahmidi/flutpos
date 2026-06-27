@@ -339,7 +339,7 @@ class CategoryEditorDialogState extends State<CategoryEditorDialog> {
               ),
               const SizedBox(height: AppSpacing.m),
               DropdownButtonFormField<String>(
-                value: _selectedStationId,
+                initialValue: _selectedStationId,
                 decoration: const InputDecoration(
                   labelText: 'Station d\'impression (Cuisine/Bar)',
                   border: OutlineInputBorder(),

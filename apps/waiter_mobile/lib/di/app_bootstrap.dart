@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:core/core.dart';
 import 'package:network/network.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../database/mobile_database.dart';
 import 'service_locator.dart';
@@ -27,6 +30,22 @@ class AppBootstrap {
 
   bool get isInitialized => _database != null && _networkClient != null;
 
+  Future<String> _getOrCreateDeviceId() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/device_id.txt');
+      if (await file.exists()) {
+        final id = await file.readAsString();
+        if (id.trim().isNotEmpty) return id.trim();
+      }
+      final newId = 'waiter-mobile-${const Uuid().v4()}';
+      await file.writeAsString(newId);
+      return newId;
+    } catch (_) {
+      return 'waiter-mobile-${DateTime.now().millisecondsSinceEpoch}';
+    }
+  }
+
   Future<void> initialize() async {
     if (isInitialized) return;
 
@@ -34,8 +53,7 @@ class AppBootstrap {
     _database = bundle.appDatabase;
     _cloudSync = bundle.cloudSync;
 
-    // TODO: Utiliser un vrai deviceId (ex: via package device_info_plus)
-    final deviceId = 'waiter-mobile-${DateTime.now().millisecondsSinceEpoch}';
+    final deviceId = await _getOrCreateDeviceId();
     
     _networkClient = WaiterNetworkClient(
       database: _database!,

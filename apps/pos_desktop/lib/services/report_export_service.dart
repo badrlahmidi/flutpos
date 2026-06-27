@@ -78,7 +78,7 @@ class ReportExportService {
             pw.Text('Période : $period'),
             pw.Text('Tickets : ${header.ticketCount}'),
             pw.SizedBox(height: 16),
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: _pdfHeaders(tab.type),
               data: _pdfRows(tab),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),

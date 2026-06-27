@@ -199,7 +199,7 @@ class _SettingsPageState extends State<SettingsPage> {
               trailing: Switch(
                 value: true,
                 onChanged: null,
-                activeColor: scheme.primary,
+                activeThumbColor: scheme.primary,
               ),
             ),
             const Divider(height: AppSpacing.s),
