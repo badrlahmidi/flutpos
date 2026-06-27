@@ -311,7 +311,7 @@ class _FloorPlanBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final zone = zones[selectedZoneIndex.clamp(0, zones.length - 1)];
     final allTables = zones.expand((z) => z.tables).toList();
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -322,12 +322,18 @@ class _FloorPlanBody extends StatelessWidget {
           ),
           child: Row(
             children: [
-              _LegendDot(color: AppColors.accentGreen, label: 'Libre'),
-              const SizedBox(width: AppSpacing.m),
-              _LegendDot(color: AppColors.accentOrange, label: 'Occupée'),
+              _LegendDot(
+                color: isDark ? AppColors.accentGreen : const Color(0xFF16A34A),
+                label: 'Libre',
+              ),
               const SizedBox(width: AppSpacing.m),
               _LegendDot(
-                color: AppColors.accentPurple,
+                color: isDark ? AppColors.accentOrange : const Color(0xFFEA580C),
+                label: 'Occupée',
+              ),
+              const SizedBox(width: AppSpacing.m),
+              _LegendDot(
+                color: isDark ? AppColors.accentPurple : const Color(0xFF6D28D9),
                 label: 'Réservée / Proforma',
               ),
             ],

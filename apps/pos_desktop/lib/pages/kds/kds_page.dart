@@ -156,15 +156,22 @@ class _KdsTicketCard extends StatelessWidget {
     return AppColors.accentRed;
   }
 
+  Color _urgencyColorLight(int elapsedMinutes) {
+    if (elapsedMinutes < 5) return const Color(0xFF16A34A);
+    if (elapsedMinutes <= 15) return const Color(0xFFEA580C);
+    return const Color(0xFFDC2626);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final elapsed = DateTime.now()
         .toUtc()
         .difference(ticket.oldestItemAt)
         .inMinutes;
-    final urgency = _urgencyColor(elapsed);
+    final urgency = isDark ? _urgencyColor(elapsed) : _urgencyColorLight(elapsed);
 
     return Card(
       elevation: 0,
@@ -279,7 +286,7 @@ class _KdsTicketCard extends StatelessWidget {
                               icon: const Icon(Icons.check_circle),
                               label: const Text('PRÊT'),
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.accentGreen,
+                                backgroundColor: isDark ? AppColors.accentGreen : const Color(0xFF16A34A),
                                 foregroundColor: Colors.white,
                                 minimumSize: const Size(100, 48),
                               ),

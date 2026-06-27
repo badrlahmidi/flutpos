@@ -22,20 +22,21 @@ class FloorPlanTableTile extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
+    final isDark = theme.brightness == Brightness.dark;
     final Color borderColor;
     final Color background;
     final Color foreground;
     switch (snapshot.tileStatus) {
       case FloorPlanTileStatus.free:
-        borderColor = AppColors.accentGreen;
+        borderColor = isDark ? AppColors.accentGreen : const Color(0xFF16A34A);
         background = scheme.surface;
         foreground = scheme.onSurface;
       case FloorPlanTileStatus.occupied:
-        borderColor = AppColors.accentOrange;
-        background = scheme.surfaceContainerHighest;
+        borderColor = isDark ? AppColors.accentOrange : const Color(0xFFEA580C);
+        background = isDark ? scheme.surfaceContainerHighest : const Color(0xFFFFF7ED);
         foreground = scheme.onSurface;
       case FloorPlanTileStatus.reservedOrProforma:
-        borderColor = AppColors.accentPurple;
+        borderColor = isDark ? AppColors.accentPurple : const Color(0xFF6D28D9);
         background = scheme.surface;
         foreground = scheme.onSurface;
     }
