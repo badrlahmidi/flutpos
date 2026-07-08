@@ -16,6 +16,9 @@ import '../widgets/dashboard_kpi_card.dart';
 import '../widgets/food_cost_panel.dart';
 import '../widgets/hourly_sales_chart.dart';
 import '../widgets/top_products_chart.dart';
+import '../widgets/payment_breakdown_chart.dart';
+import '../widgets/category_breakdown_chart.dart';
+import '../widgets/waiter_performance_panel.dart';
 
 /// Tableau de bord analytique — KPI, graphiques, food cost.
 class AnalyticsDashboardPage extends StatelessWidget {
@@ -52,6 +55,25 @@ class _AnalyticsDashboardView extends StatelessWidget {
           : AppBar(
               title: const Text('Dashboard analytique'),
               actions: [
+                IconButton(
+                  tooltip: 'Choisir une date',
+                  onPressed: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: context.read<AnalyticsDashboardBloc>().state is AnalyticsDashboardReady 
+                          ? (context.read<AnalyticsDashboardBloc>().state as AnalyticsDashboardReady).snapshot.day
+                          : DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (date != null && context.mounted) {
+                      context
+                          .read<AnalyticsDashboardBloc>()
+                          .add(AnalyticsDashboardDateChanged(date));
+                    }
+                  },
+                  icon: const Icon(Icons.calendar_today),
+                ),
                 IconButton(
                   tooltip: 'Export comptable CSV',
                   onPressed: () => context.go('/backoffice/accounting'),
@@ -125,12 +147,35 @@ class _AnalyticsDashboardView extends StatelessWidget {
                   BackofficePageHeader(
                     title: 'Dashboard analytique',
                     subtitle: dayLabel,
-                    trailing: IconButton(
-                      tooltip: 'Actualiser',
-                      onPressed: () => context
-                          .read<AnalyticsDashboardBloc>()
-                          .add(const AnalyticsDashboardRefreshRequested()),
-                      icon: const Icon(Icons.refresh),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: s.day,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (date != null && context.mounted) {
+                              context
+                                  .read<AnalyticsDashboardBloc>()
+                                  .add(AnalyticsDashboardDateChanged(date));
+                            }
+                          },
+                          icon: const Icon(Icons.calendar_today, size: 18),
+                          label: const Text('Changer de date'),
+                        ),
+                        const SizedBox(width: AppSpacing.s),
+                        IconButton(
+                          tooltip: 'Actualiser',
+                          onPressed: () => context
+                              .read<AnalyticsDashboardBloc>()
+                              .add(const AnalyticsDashboardRefreshRequested()),
+                          icon: const Icon(Icons.refresh),
+                        ),
+                      ],
                     ),
                   )
                 else
@@ -183,34 +228,66 @@ class _AnalyticsDashboardView extends StatelessWidget {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     if (constraints.maxWidth > 900) {
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      return Column(
                         children: [
-                          Expanded(
-                            child: HourlySalesChart(points: s.salesByHour),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: HourlySalesChart(points: s.salesByHour)),
+                              const SizedBox(width: AppSpacing.m),
+                              Expanded(child: TopProductsChart(products: s.topProducts)),
+                            ],
                           ),
-                          const SizedBox(width: AppSpacing.m),
-                          Expanded(
-                            child: TopProductsChart(products: s.topProducts),
+                          const SizedBox(height: AppSpacing.m),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: PaymentBreakdownChart(breakdown: s.paymentBreakdown)),
+                              const SizedBox(width: AppSpacing.m),
+                              Expanded(child: CategoryBreakdownChart(breakdown: s.categoryBreakdown)),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.m),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: WaiterPerformancePanel(performances: s.waiterPerformance)),
+                              const SizedBox(width: AppSpacing.m),
+                              Expanded(
+                                child: FoodCostPanel(
+                                  salesRevenue: s.foodCostSalesRevenue,
+                                  theoreticalCost: s.foodCostTheoretical,
+                                  gap: s.foodCostGap,
+                                  ratioPercent: s.foodCostRatioPercent,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       );
                     }
                     return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         HourlySalesChart(points: s.salesByHour),
                         const SizedBox(height: AppSpacing.m),
                         TopProductsChart(products: s.topProducts),
+                        const SizedBox(height: AppSpacing.m),
+                        PaymentBreakdownChart(breakdown: s.paymentBreakdown),
+                        const SizedBox(height: AppSpacing.m),
+                        CategoryBreakdownChart(breakdown: s.categoryBreakdown),
+                        const SizedBox(height: AppSpacing.m),
+                        WaiterPerformancePanel(performances: s.waiterPerformance),
+                        const SizedBox(height: AppSpacing.m),
+                        FoodCostPanel(
+                          salesRevenue: s.foodCostSalesRevenue,
+                          theoreticalCost: s.foodCostTheoretical,
+                          gap: s.foodCostGap,
+                          ratioPercent: s.foodCostRatioPercent,
+                        ),
                       ],
                     );
                   },
-                ),
-                const SizedBox(height: AppSpacing.l),
-                FoodCostPanel(
-                  salesRevenue: s.foodCostSalesRevenue,
-                  theoreticalCost: s.foodCostTheoretical,
-                  gap: s.foodCostGap,
-                  ratioPercent: s.foodCostRatioPercent,
                 ),
               ],
             ),

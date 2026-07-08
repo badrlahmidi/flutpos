@@ -55,6 +55,12 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
+  Future<Product?> getProductByBarcode(String barcode) {
+    return (_db.select(_db.products)..where((p) => p.barcode.equals(barcode)))
+        .getSingleOrNull();
+  }
+
+  @override
   Future<bool> hasModifiers(String productId) async {
     final links = await (_db.select(_db.productModifiers)
           ..where((pm) => pm.productId.equals(productId)))
@@ -407,6 +413,48 @@ class ProductRepositoryImpl implements ProductRepository {
   @override
   Future<List<Ingredient>> listAllIngredients() {
     return _db.select(_db.ingredients).get();
+  }
+
+  @override
+  Future<Ingredient> createIngredient(IngredientFormData data) async {
+    final id = newUuid();
+    await _db.into(_db.ingredients).insert(
+          IngredientsCompanion.insert(
+            id: Value(id),
+            name: data.name,
+            unit: data.unit,
+            costPerUnit: data.costPerUnit,
+            currentStock: Value(data.currentStock),
+            minimumStock: Value(data.minimumStock),
+            updatedAt: DateTime.now().toUtc(),
+          ),
+        );
+    return (_db.select(_db.ingredients)..where((i) => i.id.equals(id)))
+        .getSingle();
+  }
+
+  @override
+  Future<void> updateIngredient(String id, IngredientFormData data) async {
+    await (_db.update(_db.ingredients)..where((i) => i.id.equals(id))).write(
+      IngredientsCompanion(
+        name: Value(data.name),
+        unit: Value(data.unit),
+        costPerUnit: Value(data.costPerUnit),
+        currentStock: Value(data.currentStock),
+        minimumStock: Value(data.minimumStock),
+        updatedAt: Value(DateTime.now().toUtc()),
+      ),
+    );
+  }
+
+  @override
+  Future<void> deleteIngredient(String id) async {
+    // Check if ingredient is used in recipes
+    final uses = await (_db.select(_db.recipeItems)..where((r) => r.ingredientId.equals(id))).get();
+    if (uses.isNotEmpty) {
+      throw StateError('Cannot delete ingredient used in recipes.');
+    }
+    await (_db.delete(_db.ingredients)..where((i) => i.id.equals(id))).go();
   }
 
   @override

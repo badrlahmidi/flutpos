@@ -5,6 +5,7 @@ import 'package:network/client/connection_state.dart' as net;
 
 import '../di/app_bootstrap.dart';
 import 'order_page.dart';
+import 'scanner_page.dart';
 
 class TablesPage extends StatefulWidget {
   const TablesPage({super.key});
@@ -150,6 +151,17 @@ class _TablesPageState extends State<TablesPage> {
             ),
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const ScannerPage(),
+            ),
+          );
+        },
+        icon: const Icon(Icons.qr_code_scanner),
+        label: const Text('Scanner'),
       ),
     );
   }

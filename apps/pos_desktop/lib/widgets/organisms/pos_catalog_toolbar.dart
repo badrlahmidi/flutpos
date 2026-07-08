@@ -11,12 +11,16 @@ class PosCatalogToolbar extends StatelessWidget {
     required this.searchController,
     required this.filter,
     required this.onFilterChanged,
+    required this.isCompactMode,
+    required this.onCompactModeChanged,
     this.onSort,
   });
 
   final TextEditingController searchController;
   final PosProductFilter filter;
   final ValueChanged<PosProductFilter> onFilterChanged;
+  final bool isCompactMode;
+  final ValueChanged<bool> onCompactModeChanged;
   final VoidCallback? onSort;
 
   @override
@@ -65,36 +69,79 @@ class PosCatalogToolbar extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _FilterChip(
-                  label: 'Tous',
-                  selected: filter == PosProductFilter.all,
-                  onTap: () => onFilterChanged(PosProductFilter.all),
+          Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _FilterChip(
+                        label: 'Tous',
+                        selected: filter == PosProductFilter.all,
+                        onTap: () => onFilterChanged(PosProductFilter.all),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Disponibles',
+                        selected: filter == PosProductFilter.available,
+                        onTap: () => onFilterChanged(PosProductFilter.available),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Populaires',
+                        selected: filter == PosProductFilter.popular,
+                        onTap: () => onFilterChanged(PosProductFilter.popular),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Favoris',
+                        icon: Icons.favorite_border,
+                        selected: filter == PosProductFilter.favorites,
+                        onTap: () => onFilterChanged(PosProductFilter.favorites),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 8),
-                _FilterChip(
-                  label: 'Disponibles',
-                  selected: filter == PosProductFilter.available,
-                  onTap: () => onFilterChanged(PosProductFilter.available),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: PosDesignTokens.cardBackground,
+                  borderRadius: BorderRadius.circular(PosDesignTokens.radiusMd),
+                  border: Border.all(color: PosDesignTokens.borderLight),
                 ),
-                const SizedBox(width: 8),
-                _FilterChip(
-                  label: 'Populaires',
-                  selected: filter == PosProductFilter.popular,
-                  onTap: () => onFilterChanged(PosProductFilter.popular),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        Icons.grid_view_rounded,
+                        size: 18,
+                        color: !isCompactMode ? PosDesignTokens.primaryBlue : PosDesignTokens.textMuted,
+                      ),
+                      onPressed: () => onCompactModeChanged(false),
+                      tooltip: 'Mode Grille Standard',
+                      splashRadius: 16,
+                    ),
+                    Container(
+                      width: 1,
+                      height: 20,
+                      color: PosDesignTokens.borderLight,
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.view_headline_rounded,
+                        size: 18,
+                        color: isCompactMode ? PosDesignTokens.primaryBlue : PosDesignTokens.textMuted,
+                      ),
+                      onPressed: () => onCompactModeChanged(true),
+                      tooltip: 'Mode Boutons Compacts',
+                      splashRadius: 16,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                _FilterChip(
-                  label: 'Favoris',
-                  icon: Icons.favorite_border,
-                  selected: filter == PosProductFilter.favorites,
-                  onTap: () => onFilterChanged(PosProductFilter.favorites),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

@@ -98,6 +98,23 @@ class KitchenNoteFormData {
   final bool isActive;
 }
 
+/// Données formulaire Ingrédient (Stock).
+class IngredientFormData {
+  const IngredientFormData({
+    required this.name,
+    this.unit = 'kg',
+    this.costPerUnit = 0,
+    this.currentStock = 0,
+    this.minimumStock = 0,
+  });
+
+  final String name;
+  final String unit;
+  final double costPerUnit;
+  final double currentStock;
+  final double minimumStock;
+}
+
 /// Accès au catalogue (catégories, produits, modificateurs).
 abstract class ProductRepository {
   Future<List<Category>> getActiveCategories();
@@ -111,6 +128,8 @@ abstract class ProductRepository {
   Stream<List<Product>> watchProductsByCategory(String categoryId);
 
   Future<Product?> getProductById(String productId);
+
+  Future<Product?> getProductByBarcode(String barcode);
 
   Future<bool> hasModifiers(String productId);
 
@@ -186,6 +205,12 @@ abstract class ProductRepository {
 
   // ─── Ingredients & Recipe Items ───
   Future<List<Ingredient>> listAllIngredients();
+
+  Future<Ingredient> createIngredient(IngredientFormData data);
+
+  Future<void> updateIngredient(String id, IngredientFormData data);
+
+  Future<void> deleteIngredient(String id);
 
   Future<List<RecipeItem>> getRecipeForProduct(String productId);
 

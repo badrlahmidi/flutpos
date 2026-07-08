@@ -23,6 +23,7 @@ class SessionReportPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final session = report.session;
+    final isClosed = session.status == 'CLOSED';
 
     return Card(
       child: Padding(
@@ -52,22 +53,22 @@ class SessionReportPanel extends StatelessWidget {
             _row(
               theme,
               'Ventes espèces',
-              PriceFormatter.format(report.cashSales),
+              isClosed ? PriceFormatter.format(report.cashSales) : '***',
             ),
             _row(
               theme,
               'Ventes carte/TPE',
-              PriceFormatter.format(report.cardSales),
+              isClosed ? PriceFormatter.format(report.cardSales) : '***',
             ),
             _row(
               theme,
               'Autres paiements',
-              PriceFormatter.format(report.otherSales),
+              isClosed ? PriceFormatter.format(report.otherSales) : '***',
             ),
             _row(
               theme,
               'Total encaissé',
-              PriceFormatter.format(report.totalSales),
+              isClosed ? PriceFormatter.format(report.totalSales) : '***',
               bold: true,
             ),
             const Divider(height: AppSpacing.m),
@@ -85,7 +86,7 @@ class SessionReportPanel extends StatelessWidget {
             _row(
               theme,
               'Espèces théoriques tiroir',
-              PriceFormatter.format(report.expectedCashBalance),
+              isClosed ? PriceFormatter.format(report.expectedCashBalance) : '*** (Clôture à l\'aveugle)',
               bold: true,
               highlight: true,
             ),
@@ -108,7 +109,7 @@ class SessionReportPanel extends StatelessWidget {
                 _row(
                   theme,
                   PaymentMethod.fromDb(entry.key)?.label ?? entry.key,
-                  PriceFormatter.format(entry.value),
+                  isClosed ? PriceFormatter.format(entry.value) : '***',
                 ),
             ],
             if (report.movements.isNotEmpty) ...[

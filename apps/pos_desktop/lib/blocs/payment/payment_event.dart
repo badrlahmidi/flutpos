@@ -48,12 +48,13 @@ final class PaymentSetRemainingPressed extends PaymentEvent {
 }
 
 final class PaymentMethodPressed extends PaymentEvent {
-  const PaymentMethodPressed(this.method);
+  const PaymentMethodPressed(this.method, {this.customerId});
 
   final PaymentMethod method;
+  final String? customerId;
 
   @override
-  List<Object?> get props => [method];
+  List<Object?> get props => [method, customerId];
 }
 
 final class PaymentSplitModeToggled extends PaymentEvent {

@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import '../../theme/pos_design_tokens.dart';
 import '../molecules/service_mode_toggle.dart';
 
+import '../../utils/price_formatter.dart';
+
 enum PosWorkspace { register, deliveries }
 
-/// Barre supérieure — maquette Ritaj POS.
+/// Barre supérieure — maquette Ritaj POS avec badge de contexte de table active.
 class PosTopBar extends StatelessWidget {
   const PosTopBar({
     super.key,
@@ -23,6 +25,9 @@ class PosTopBar extends StatelessWidget {
     this.onHome,
     this.homeIcon,
     this.homeTooltip,
+    this.tableName,
+    this.itemCount = 0,
+    this.totalAmount = 0.0,
   });
 
   final bool lanOnline;
@@ -38,6 +43,9 @@ class PosTopBar extends StatelessWidget {
   final VoidCallback? onHome;
   final IconData? homeIcon;
   final String? homeTooltip;
+  final String? tableName;
+  final int itemCount;
+  final double totalAmount;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +73,66 @@ class PosTopBar extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           _StatusPill(online: lanOnline, clientCount: clientCount),
+          const SizedBox(width: 16),
+
+          // ── Active Table / Order context badge ──────────────────────
+          if (tableName != null && tableName!.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: PosDesignTokens.primaryBlue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: PosDesignTokens.primaryBlue.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.table_restaurant_rounded,
+                    size: 16,
+                    color: PosDesignTokens.primaryBlue,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Table $tableName',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: PosDesignTokens.primaryBlue,
+                    ),
+                  ),
+                  if (itemCount > 0) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 1,
+                      height: 12,
+                      color: PosDesignTokens.primaryBlue.withValues(alpha: 0.3),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$itemCount art.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        color: PosDesignTokens.textMuted,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      PriceFormatter.format(totalAmount),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                        color: PosDesignTokens.primaryBlue,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
           const Spacer(),
           _ModeCaisseMenu(
             workspace: workspace,

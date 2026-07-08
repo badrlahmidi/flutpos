@@ -15,6 +15,7 @@ import '../../widgets/organisms/top_bar.dart';
 import 'widgets/floor_plan_table_tile.dart';
 import 'widgets/guest_count_dialog.dart';
 import 'widgets/table_operations_sheet.dart';
+import '../../utils/security_guard.dart';
 
 /// Plan de salle interactif par zone.
 class FloorPlanPage extends StatelessWidget {
@@ -141,6 +142,47 @@ class _FloorPlanView extends StatelessWidget {
         if (refreshed == true && context.mounted) {
           bloc.add(const FloorPlanRefreshRequested());
         }
+      case TableOperationKind.liberate:
+        final authorized = await SecurityGuard.authorize(
+          context,
+          SecurityOperations.voidOrder,
+          currentUser: user,
+        );
+        if (authorized == null || !context.mounted) {
+          return;
+        }
+
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('Libérer la table ${snapshot.table.name} ?'),
+            content: const Text(
+              'Cela annulera et supprimera définitivement le ticket en cours sur cette table.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Non, garder'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Oui, libérer'),
+              ),
+            ],
+          ),
+        );
+        if (confirm == true && context.mounted) {
+          await sl<OrderRepository>().clearLocalOpenOrderForTable(snapshot.table.id);
+          if (context.mounted) {
+            bloc.add(const FloorPlanRefreshRequested());
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Table ${snapshot.table.name} libérée avec succès'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
     }
   }
 
@@ -195,6 +237,11 @@ class _FloorPlanView extends StatelessWidget {
                     tooltip: 'Écran cuisine (KDS)',
                     icon: const Icon(Icons.soup_kitchen_outlined),
                     onPressed: () => context.go('/kds'),
+                  ),
+                  IconButton(
+                    tooltip: 'Suivi des tables (Monitor)',
+                    icon: const Icon(Icons.monitor_heart_outlined),
+                    onPressed: () => context.go('/floor/monitor'),
                   ),
                   IconButton(
                     tooltip: 'Réservations',
@@ -312,9 +359,29 @@ class _FloorPlanBody extends StatelessWidget {
     final zone = zones[selectedZoneIndex.clamp(0, zones.length - 1)];
     final allTables = zones.expand((z) => z.tables).toList();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Live stats
+    final totalTables = allTables.length;
+    final occupiedTables =
+        allTables.where((t) => t.tileStatus == FloorPlanTileStatus.occupied).length;
+    final freeTables = allTables
+        .where((t) => t.tileStatus == FloorPlanTileStatus.free)
+        .length;
+    final totalRevenue = allTables
+        .where((t) => t.currentGrandTotal != null)
+        .fold<double>(0, (sum, t) => sum + (t.currentGrandTotal ?? 0));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // ── Live Summary Bar ──────────────────────────────────────────────
+        _LiveSummaryBar(
+          totalTables: totalTables,
+          occupiedTables: occupiedTables,
+          freeTables: freeTables,
+          totalRevenue: totalRevenue,
+          isDark: isDark,
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.m,
@@ -411,6 +478,180 @@ class _FloorPlanBody extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _LiveSummaryBar extends StatelessWidget {
+  const _LiveSummaryBar({
+    required this.totalTables,
+    required this.occupiedTables,
+    required this.freeTables,
+    required this.totalRevenue,
+    required this.isDark,
+  });
+
+  final int totalTables;
+  final int occupiedTables;
+  final int freeTables;
+  final double totalRevenue;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final occupancyRate = totalTables > 0
+        ? (occupiedTables / totalTables * 100).round()
+        : 0;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.m,
+        AppSpacing.s,
+        AppSpacing.m,
+        0,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.s,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF1A1F2E)
+            : scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _SummaryChip(
+            label: 'Tables',
+            value: '$totalTables',
+            icon: Icons.table_bar_rounded,
+            color: scheme.primary,
+          ),
+          _SummaryDivider(),
+          _SummaryChip(
+            label: 'Occupées',
+            value: '$occupiedTables',
+            icon: Icons.people_rounded,
+            color: isDark ? AppColors.accentOrange : const Color(0xFFEA580C),
+          ),
+          _SummaryDivider(),
+          _SummaryChip(
+            label: 'Libres',
+            value: '$freeTables',
+            icon: Icons.check_circle_outline_rounded,
+            color: isDark ? AppColors.accentGreen : const Color(0xFF16A34A),
+          ),
+          _SummaryDivider(),
+          _SummaryChip(
+            label: 'Taux',
+            value: '$occupancyRate%',
+            icon: Icons.donut_small_rounded,
+            color: occupancyRate >= 80
+                ? (isDark ? AppColors.accentRed : const Color(0xFFDC2626))
+                : scheme.primary,
+          ),
+          const Spacer(),
+          if (totalRevenue > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.monetization_on_rounded,
+                    size: 14,
+                    color: scheme.primary,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    '${totalRevenue.toStringAsFixed(0)} DH',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryChip extends StatelessWidget {
+  const _SummaryChip({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 5),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 9,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 28,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
     );
   }
 }

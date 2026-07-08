@@ -28,6 +28,7 @@ import 'tables/security_rules.dart';
 import 'tables/users.dart';
 import 'tables/zones.dart';
 import 'tables/vouchers.dart';
+import 'tables/customers.dart';
 
 part 'app_database.g.dart';
 
@@ -59,6 +60,7 @@ part 'app_database.g.dart';
     AuditTrail,
     Vouchers,
     KitchenNotes,
+    Customers,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -68,7 +70,7 @@ class AppDatabase extends _$AppDatabase {
   final bool powerSyncManaged;
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -110,6 +112,10 @@ class AppDatabase extends _$AppDatabase {
                 ELSE 0
               END
             ''');
+          }
+          if (from < 9) {
+            await m.createTable(customers);
+            await m.addColumn(orders, orders.customerId);
           }
         },
       );

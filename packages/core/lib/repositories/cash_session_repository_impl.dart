@@ -90,6 +90,7 @@ class CashSessionRepositoryImpl implements CashSessionRepository {
           case PaymentMethod.cheque:
           case PaymentMethod.voucher:
           case PaymentMethod.employeeMeal:
+          case PaymentMethod.account:
           case null:
             otherSales += amount;
         }

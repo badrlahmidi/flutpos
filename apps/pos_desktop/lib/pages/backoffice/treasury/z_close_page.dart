@@ -6,11 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../../../utils/security_guard.dart';
 import '../../../di/service_locator.dart';
 import '../../../services/print/pos_print_service.dart';
+import '../../../services/database_backup_service.dart';
 import '../../../theme/app_spacing.dart';
-import '../../../utils/price_formatter.dart';
 import '../../../widgets/atoms/pos_button.dart';
 import '../../../widgets/backoffice/backoffice_page_header.dart';
-import '../../session/widgets/session_report_panel.dart';
 
 /// Clôture Z — comptage réel vs théorique, raison d'écart obligatoire.
 class ZClosePage extends StatefulWidget {
@@ -33,6 +32,7 @@ class _ZClosePageState extends State<ZClosePage> {
   final _countedController = TextEditingController();
   final _noteController = TextEditingController();
   bool _closing = false;
+  bool _varianceDetected = false;
 
   @override
   void dispose() {
@@ -57,10 +57,13 @@ class _ZClosePageState extends State<ZClosePage> {
     final note = _noteController.text.trim();
 
     if (variance.abs() > 0.009 && note.length < 3) {
+      if (!_varianceDetected) {
+        setState(() => _varianceDetected = true);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Écart détecté — indiquez une raison (3 caractères min.)',
+            'Écart détecté ! Recomptez le tiroir ou justifiez obligatoirement la différence.',
           ),
         ),
       );
@@ -87,6 +90,9 @@ class _ZClosePageState extends State<ZClosePage> {
         expectedBalance: expected,
         closingNote: variance.abs() > 0.009 ? note : null,
       );
+
+      // Lancement de la sauvegarde de sécurité locale
+      await DatabaseBackupService.instance.performBackup();
 
       final closedReport = widget.report.copyWithSession(session);
       final printResult = await sl<PosPrintService>().printZReport(
@@ -123,7 +129,6 @@ class _ZClosePageState extends State<ZClosePage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final expected = widget.report.expectedCashBalance;
 
     return Scaffold(
       appBar: widget.embeddedInShell
@@ -150,10 +155,6 @@ class _ZClosePageState extends State<ZClosePage> {
                   onPressed: _closing ? null : () => context.pop(false),
                 ),
               ),
-            SessionReportPanel(
-              report: widget.report,
-              title: 'Rapport Z — récapitulatif',
-            ),
             const SizedBox(height: AppSpacing.m),
             Card(
               child: Padding(
@@ -162,18 +163,15 @@ class _ZClosePageState extends State<ZClosePage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Comptage physique du tiroir',
+                      'Comptage physique du tiroir (Clôture à l\'aveugle)',
                       style: theme.textTheme.titleMedium,
                     ),
-                    const SizedBox(height: AppSpacing.s),
-                    Text(
-                      'Théorique : ${PriceFormatter.format(expected)}',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
                     const SizedBox(height: AppSpacing.m),
+                    const Text(
+                      'Comptez les espèces présentes dans le tiroir (y compris le fond de caisse initial) et saisissez le montant total.',
+                      style: TextStyle(fontStyle: FontStyle.italic),
+                    ),
+                    const SizedBox(height: AppSpacing.l),
                     TextField(
                       controller: _countedController,
                       enabled: !_closing,
@@ -183,20 +181,43 @@ class _ZClosePageState extends State<ZClosePage> {
                         FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
                       ],
                       decoration: const InputDecoration(
-                        labelText: 'Espèces comptées (réel)',
+                        labelText: 'Montant total compté (Espèces)',
                         border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.payments_outlined),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.m),
-                    TextField(
-                      controller: _noteController,
-                      enabled: !_closing,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Raison écart (si différence)',
-                        border: OutlineInputBorder(),
+                    if (_varianceDetected) ...[
+                      const SizedBox(height: AppSpacing.l),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.m),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.errorContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
+                            const SizedBox(width: AppSpacing.s),
+                            const Expanded(
+                              child: Text(
+                                'Le montant saisi ne correspond pas au total attendu par le système. Justification obligatoire pour forcer la clôture.',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpacing.m),
+                      TextField(
+                        controller: _noteController,
+                        enabled: !_closing,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Raison de l\'écart de caisse (obligatoire)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

@@ -5,6 +5,7 @@ import '../database/app_database.dart';
 import '../entities/daily_analytics_snapshot.dart';
 import '../entities/report_entities.dart';
 import '../enums/order_type.dart';
+import '../enums/payment_method.dart';
 import '../usecases/money_math.dart';
 import 'analytics_repository.dart';
 
@@ -89,6 +90,31 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
 
     final topProducts = await _loadTopProducts(paidOrderIds);
     final foodCost = await _computeFoodCost(paidOrderIds);
+    final paymentBreakdown = _buildPaymentBreakdown(payments, orderById);
+    final categoryBreakdown = await _buildCategoryBreakdown(paidOrderIds);
+    final waiterPerformance = _buildWaiterPerformance(
+      orders.where((o) => o.status == 'PAID').toList(),
+      revenueByOrder,
+    );
+
+    // Résolution des noms de serveurs
+    final waiterIds = waiterPerformance.map((w) => w.userId).toSet().toList();
+    if (waiterIds.isNotEmpty) {
+      final users = await (_db.select(_db.users)
+            ..where((u) => u.id.isIn(waiterIds)))
+          .get();
+      final nameById = {for (final u in users) u.id: u.name};
+      for (var i = 0; i < waiterPerformance.length; i++) {
+        final wp = waiterPerformance[i];
+        waiterPerformance[i] = WaiterPerformance(
+          userId: wp.userId,
+          userName: nameById[wp.userId] ?? wp.userId,
+          ticketCount: wp.ticketCount,
+          totalRevenue: wp.totalRevenue,
+          averageBasket: wp.averageBasket,
+        );
+      }
+    }
 
     return DailyAnalyticsSnapshot(
       day: start,
@@ -103,6 +129,9 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
       foodCostTheoretical: foodCost.theoreticalCost,
       foodCostGap: foodCost.gap,
       foodCostRatioPercent: foodCost.ratioPercent,
+      paymentBreakdown: paymentBreakdown,
+      categoryBreakdown: categoryBreakdown,
+      waiterPerformance: waiterPerformance,
     );
   }
 
@@ -270,6 +299,125 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
       gap: gap,
       ratioPercent: ratioPercent,
     );
+  }
+
+  // ─── DASHBOARD HELPERS ──────────────────────────────────────────────────
+
+  List<PaymentMethodBreakdown> _buildPaymentBreakdown(
+    List<Payment> payments,
+    Map<String, Order> orderById,
+  ) {
+    final amountByMethod = <String, double>{};
+    final countByMethod = <String, int>{};
+
+    for (final p in payments) {
+      if (orderById[p.orderId]?.status != 'PAID') continue;
+      amountByMethod[p.paymentMethod] =
+          roundMoney((amountByMethod[p.paymentMethod] ?? 0) + p.amount);
+      countByMethod[p.paymentMethod] =
+          (countByMethod[p.paymentMethod] ?? 0) + 1;
+    }
+
+    final result = amountByMethod.entries.map((e) {
+      final pm = PaymentMethod.fromDb(e.key);
+      return PaymentMethodBreakdown(
+        method: e.key,
+        label: pm?.label ?? e.key,
+        amount: e.value,
+        count: countByMethod[e.key] ?? 0,
+      );
+    }).toList()
+      ..sort((a, b) => b.amount.compareTo(a.amount));
+
+    return result;
+  }
+
+  Future<List<CategoryBreakdown>> _buildCategoryBreakdown(
+    List<String> orderIds,
+  ) async {
+    if (orderIds.isEmpty) return [];
+
+    final items = await (_db.select(_db.orderItems)
+          ..where(
+            (i) => i.orderId.isIn(orderIds) & i.status.isNotValue('VOIDED'),
+          ))
+        .get();
+    if (items.isEmpty) return [];
+
+    final productIds = items.map((i) => i.productId).toSet().toList();
+    final products = await (_db.select(_db.products)
+          ..where((p) => p.id.isIn(productIds)))
+        .get();
+    final catIdByProduct = {for (final p in products) p.id: p.categoryId};
+
+    final categoryIds =
+        catIdByProduct.values.toSet().toList();
+    final categories = await (_db.select(_db.categories)
+          ..where((c) => c.id.isIn(categoryIds)))
+        .get();
+    final catNameById = {for (final c in categories) c.id: c.name};
+
+    final revenueByCat = <String, double>{};
+    final qtyByCat = <String, double>{};
+
+    for (final item in items) {
+      final catId = catIdByProduct[item.productId] ?? '';
+      revenueByCat[catId] = roundMoney(
+        (revenueByCat[catId] ?? 0) + item.quantity * item.unitPrice,
+      );
+      qtyByCat[catId] = (qtyByCat[catId] ?? 0) + item.quantity;
+    }
+
+    final result = revenueByCat.entries.map((e) {
+      return CategoryBreakdown(
+        categoryId: e.key,
+        categoryName: catNameById[e.key] ?? 'Sans catégorie',
+        revenue: e.value,
+        quantity: qtyByCat[e.key] ?? 0,
+      );
+    }).toList()
+      ..sort((a, b) => b.revenue.compareTo(a.revenue));
+
+    return result;
+  }
+
+  List<WaiterPerformance> _buildWaiterPerformance(
+    List<Order> paidOrders,
+    Map<String, double> revenueByOrder,
+  ) {
+    final ttcByUser = <String, double>{};
+    final countByUser = <String, int>{};
+    final nameByUser = <String, String>{};
+
+    for (final o in paidOrders) {
+      final amount = revenueByOrder[o.id] ?? 0;
+      ttcByUser[o.waiterId] =
+          roundMoney((ttcByUser[o.waiterId] ?? 0) + amount);
+      countByUser[o.waiterId] = (countByUser[o.waiterId] ?? 0) + 1;
+    }
+
+    // Résolution des noms de serveurs de manière synchrone
+    // (déjà chargé en mémoire via les orders)
+    return _resolveWaiterNames(ttcByUser, countByUser);
+  }
+
+  List<WaiterPerformance> _resolveWaiterNames(
+    Map<String, double> ttcByUser,
+    Map<String, int> countByUser,
+  ) {
+    // On retourne des WaiterPerformance avec les IDs comme noms temporaires;
+    // les noms seront résolus dans la méthode `loadDailyDashboard` ci-dessous.
+    return ttcByUser.entries.map((e) {
+      final count = countByUser[e.key] ?? 1;
+      return WaiterPerformance(
+        userId: e.key,
+        userName: e.key, // placeholder
+        ticketCount: count,
+        totalRevenue: e.value,
+        averageBasket: roundMoney(e.value / count),
+      );
+    }).toList()
+      ..sort((a, b) => b.totalRevenue.compareTo(a.totalRevenue));
   }
 
   // ─── REPORTING METHODS ────────────────────────────────────────────────────

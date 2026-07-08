@@ -74,6 +74,8 @@ export 'repositories/product_repository.dart';
 export 'repositories/product_repository_impl.dart';
 export 'repositories/voucher_repository.dart';
 export 'repositories/voucher_repository_impl.dart';
+export 'repositories/customer_repository.dart';
+export 'repositories/customer_repository_impl.dart';
 export 'utils/report_csv_builder.dart';
 export 'utils/accounting_csv_builder.dart';
 export 'utils/moroccan_ice.dart';

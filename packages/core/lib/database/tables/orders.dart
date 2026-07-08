@@ -13,6 +13,8 @@ class Orders extends Table {
   TextColumn get waiterId => text().references(Users, #id)();
   TextColumn get tableId =>
       text().nullable().references(RestaurantTables, #id)();
+  TextColumn get customerId =>
+      text().nullable()(); // No hard FK to avoid circular dependencies for now, or we can use references
   TextColumn get orderType => text()();
   TextColumn get source =>
       text().withDefault(const Constant('MANUAL'))();

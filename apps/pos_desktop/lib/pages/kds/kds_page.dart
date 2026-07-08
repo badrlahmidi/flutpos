@@ -34,8 +34,10 @@ class _KdsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0D1117) : scheme.surfaceContainerLowest,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -63,7 +65,22 @@ class _KdsView extends StatelessWidget {
                 if (state is KdsReady && state.lastReadyProductName != null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('${state.lastReadyProductName} — PRÊT'),
+                      backgroundColor: isDark
+                          ? AppColors.accentGreen
+                          : const Color(0xFF16A34A),
+                      content: Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${state.lastReadyProductName} — PRÊT ✓',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                       duration: const Duration(seconds: 2),
                     ),
                   );
@@ -87,54 +104,41 @@ class _KdsView extends StatelessWidget {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.check_circle_outline,
-                                size: AppSpacing.minTouchTarget,
-                                color: scheme.primary,
+                              Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: (isDark
+                                          ? AppColors.accentGreen
+                                          : const Color(0xFF16A34A))
+                                      .withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.check_circle_outline,
+                                  size: 56,
+                                  color: isDark
+                                      ? AppColors.accentGreen
+                                      : const Color(0xFF16A34A),
+                                ),
                               ),
                               const SizedBox(height: AppSpacing.m),
                               Text(
                                 'Aucun plat en attente',
-                                style: theme.textTheme.titleLarge,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'La cuisine est à jour — bon service !',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
                               ),
                             ],
                           ),
                         )
-                      : RefreshIndicator(
-                          onRefresh: () async {
-                            context
-                                .read<KdsBloc>()
-                                .add(const KdsRefreshRequested());
-                            await context.read<KdsBloc>().stream.firstWhere(
-                                  (s) => s is KdsReady || s is KdsError,
-                                );
-                          },
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final crossAxisCount =
-                                  constraints.maxWidth > 1200 ? 3 : 2;
-                              return GridView.builder(
-                                padding: const EdgeInsets.all(AppSpacing.m),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  mainAxisSpacing: AppSpacing.m,
-                                  crossAxisSpacing: AppSpacing.m,
-                                  mainAxisExtent: 320,
-                                ),
-                                itemCount: tickets.length,
-                                itemBuilder: (context, index) {
-                                  return _KdsTicketCard(ticket: tickets[index])
-                                      .animate(
-                                        delay: Duration(milliseconds: index * 40),
-                                      )
-                                      .fadeIn(duration: 250.ms)
-                                      .slideY(begin: 0.05, end: 0);
-                                },
-                              );
-                            },
-                          ),
-                        ),
+                      : _KdsColumns(tickets: tickets, isDark: isDark),
                 };
               },
             ),
@@ -145,10 +149,62 @@ class _KdsView extends StatelessWidget {
   }
 }
 
+/// KDS column layout with urgency-aware ticket cards.
+class _KdsColumns extends StatelessWidget {
+  const _KdsColumns({required this.tickets, required this.isDark});
+  final List<KdsOrderTicket> tickets;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columnCount = constraints.maxWidth > 1400
+            ? 4
+            : constraints.maxWidth > 1000
+                ? 3
+                : 2;
+        return ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.all(AppSpacing.m),
+          children: [
+            for (int col = 0; col < columnCount; col++)
+              SizedBox(
+                width: (constraints.maxWidth - AppSpacing.m * 2) / columnCount -
+                    AppSpacing.m * (columnCount - 1) / columnCount,
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: (tickets.length / columnCount).ceil(),
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.m),
+                  itemBuilder: (context, row) {
+                    final index = row * columnCount + col;
+                    if (index >= tickets.length) return const SizedBox.shrink();
+                    return _KdsTicketCard(
+                      ticket: tickets[index],
+                      isDark: isDark,
+                    )
+                        .animate(
+                          delay: Duration(milliseconds: index * 40),
+                        )
+                        .fadeIn(duration: 250.ms)
+                        .slideY(begin: 0.05, end: 0);
+                  },
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _KdsTicketCard extends StatelessWidget {
-  const _KdsTicketCard({required this.ticket});
+  const _KdsTicketCard({required this.ticket, this.isDark = false});
 
   final KdsOrderTicket ticket;
+  final bool isDark;
 
   Color _urgencyColor(int elapsedMinutes) {
     if (elapsedMinutes < 5) return AppColors.accentGreen;

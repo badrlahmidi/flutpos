@@ -159,6 +159,13 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         return;
       }
 
+      if (event.customerId != null) {
+        await _orderRepository.setOrderCustomer(
+          current.order.order.id,
+          event.customerId,
+        );
+      }
+
       await _orderRepository.addPayment(
         orderId: current.order.order.id,
         method: event.method,

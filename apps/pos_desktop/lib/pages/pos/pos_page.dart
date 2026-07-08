@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
@@ -87,10 +88,16 @@ class _PosViewState extends State<_PosView> with WindowListener {
   PosWorkspace _workspace = PosWorkspace.register;
   PosProductFilter _productFilter = PosProductFilter.all;
   Map<String, int> _categoryCounts = {};
+  bool _isCompactMode = false;
+
+  // -- Barcode scanner global listener --
+  String _barcodeBuffer = '';
+  DateTime? _lastKeystrokeTime;
 
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
     if (DesktopWindow.isKioskTarget) {
       windowManager.addListener(this);
     }
@@ -135,6 +142,7 @@ class _PosViewState extends State<_PosView> with WindowListener {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     _searchController.dispose();
     if (DesktopWindow.isKioskTarget) {
       windowManager.removeListener(this);
@@ -144,6 +152,44 @@ class _PosViewState extends State<_PosView> with WindowListener {
 
   @override
   void onWindowClose() {}
+
+  bool _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      final now = DateTime.now();
+      if (_lastKeystrokeTime != null &&
+          now.difference(_lastKeystrokeTime!).inMilliseconds > 60) {
+        // Un lecteur de code-barres tape très vite (< 30ms). 
+        // Si délai > 60ms, c'est probablement un humain, on réinitialise.
+        _barcodeBuffer = '';
+      }
+      _lastKeystrokeTime = now;
+
+      if (event.logicalKey == LogicalKeyboardKey.enter) {
+        if (_barcodeBuffer.length >= 3) {
+          _processScannedBarcode(_barcodeBuffer);
+          _barcodeBuffer = '';
+          return true; // Intercepte l'événement pour ne pas valider des formulaires
+        }
+        _barcodeBuffer = '';
+      } else if (event.character != null) {
+        _barcodeBuffer += event.character!;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _processScannedBarcode(String barcode) async {
+    final product = await _productRepository.getProductByBarcode(barcode);
+    if (product != null && mounted) {
+      context.read<CartBloc>().add(CartItemAdded(product));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🏷️ ${product.name} ajouté via douchette'),
+          duration: const Duration(milliseconds: 1500),
+        ),
+      );
+    }
+  }
 
   void _onCategorySelected(Category category) {
     context.read<CatalogBloc>().add(CatalogCategorySelected(category.id));
@@ -176,26 +222,66 @@ class _PosViewState extends State<_PosView> with WindowListener {
         return;
       }
 
-      final selected = await showModifierSelectionDialog(
-        context: context,
-        product: product,
-        groups: groups,
-      );
-      if (!mounted || selected == null) {
+      // Si certains modificateurs sont requis, on affiche obligatoirement la boîte de dialogue
+      final hasRequiredModifiers = groups.any((g) => g.group.isRequired);
+      if (hasRequiredModifiers) {
+        final selected = await showModifierSelectionDialog(
+          context: context,
+          product: product,
+          groups: groups,
+        );
+        if (!mounted || selected == null) {
+          return;
+        }
+
+        context.read<CartBloc>().add(
+              CartItemAddedWithModifiers(
+                product: product,
+                options: selected.options,
+                customNotes: selected.customNotes,
+              ),
+            );
         return;
       }
+    }
 
-      context.read<CartBloc>().add(
-            CartItemAddedWithModifiers(
-              product: product,
-              options: selected.options,
-              customNotes: selected.customNotes,
-            ),
-          );
+    // Ajout direct si pas de modificateurs ou si tous les modificateurs sont optionnels
+    context.read<CartBloc>().add(CartItemAdded(product));
+  }
+
+  Future<void> _onProductLongPress(Product product) async {
+    final cartState = context.read<CartBloc>().state;
+    if (cartState.isOrderLocked) {
       return;
     }
 
-    context.read<CartBloc>().add(CartItemAdded(product));
+    final hasModifiers = await _productRepository.hasModifiers(product.id);
+    if (!mounted || !hasModifiers) {
+      return;
+    }
+
+    final groups =
+        await _productRepository.getModifierGroupsForProduct(product.id);
+    if (!mounted) {
+      return;
+    }
+
+    final selected = await showModifierSelectionDialog(
+      context: context,
+      product: product,
+      groups: groups,
+    );
+    if (!mounted || selected == null) {
+      return;
+    }
+
+    context.read<CartBloc>().add(
+          CartItemAddedWithModifiers(
+            product: product,
+            options: selected.options,
+            customNotes: selected.customNotes,
+          ),
+        );
   }
 
   Future<bool> _confirmLeaveCurrentCart() async {
@@ -295,9 +381,10 @@ class _PosViewState extends State<_PosView> with WindowListener {
 
     // Retour automatique aux tables après commande en cuisine si c'est une table
     if (widget.tableLabel != null && widget.tableLabel!.isNotEmpty) {
+      final router = GoRouter.of(context);
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          context.go('/floor');
+          router.go('/floor');
         }
       });
     }
@@ -355,6 +442,28 @@ class _PosViewState extends State<_PosView> with WindowListener {
   }
 
   Future<void> _onPay(CompleteOrder order) async {
+    bool hasUnfired = order.activeItems.any((i) => !i.orderItem.isFired);
+    if (hasUnfired) {
+      final bloc = context.read<CartBloc>();
+      while (hasUnfired && mounted) {
+        bloc.add(const CartCourseFireRequested());
+        final nextState = await bloc.stream.firstWhere(
+          (s) => (s is CartReady && s.fireCourseResult != null) || s is CartError,
+        );
+        if (!mounted) return;
+        if (nextState is CartError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(nextState.message)),
+          );
+          return;
+        }
+        final currentOrder = (nextState as CartReady).order;
+        hasUnfired = currentOrder.activeItems.any((i) => !i.orderItem.isFired);
+      }
+    }
+
+    if (!mounted) return;
+
     final paid = await context.push<bool>('/payment/${order.order.id}');
 
     if (!mounted || paid != true) {
@@ -373,9 +482,10 @@ class _PosViewState extends State<_PosView> with WindowListener {
 
     // Retour automatique aux tables après paiement si c'est une table
     if (widget.tableLabel != null && widget.tableLabel!.isNotEmpty) {
+      final router = GoRouter.of(context);
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          context.go('/floor');
+          router.go('/floor');
         }
       });
     }
@@ -387,6 +497,26 @@ class _PosViewState extends State<_PosView> with WindowListener {
 
   void _onClaimNextCourse() {
     context.read<CartBloc>().add(const CartCourseFireRequested());
+  }
+
+  Future<void> _onExitPos() async {
+    final cartState = context.read<CartBloc>().state;
+    final order = cartState.orderOrNull;
+
+    if (widget.tableLabel != null) {
+      final hasActiveItems = order?.activeItems.isNotEmpty ?? false;
+      if (!hasActiveItems) {
+        final tableId = order?.order.tableId;
+        if (tableId != null) {
+          await sl<OrderRepository>().clearLocalOpenOrderForTable(tableId);
+        }
+      }
+      if (mounted) {
+        context.go('/floor');
+      }
+    } else {
+      context.go('/menu');
+    }
   }
 
   Future<void> _onDiscount(CompleteOrder order) async {
@@ -506,7 +636,45 @@ class _PosViewState extends State<_PosView> with WindowListener {
                 prev.fireCourseResult?.courseNumber !=
                     curr.fireCourseResult?.courseNumber),
         listener: _onFireCourseResult,
-        child: Scaffold(
+        child: Focus(
+          autofocus: true,
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent) {
+              final cartState = context.read<CartBloc>().state;
+              final currentOrder = cartState.orderOrNull;
+
+              if (event.logicalKey == LogicalKeyboardKey.f5) {
+                if (currentOrder != null) {
+                  _onPay(currentOrder);
+                }
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.f4) {
+                if (currentOrder != null) {
+                  _onSendToKitchen(currentOrder);
+                }
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.f1) {
+                if (currentOrder != null) {
+                  _onDiscount(currentOrder);
+                }
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.f2) {
+                if (currentOrder != null) {
+                  _onProforma(currentOrder);
+                }
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.escape) {
+                _onExitPos();
+                return KeyEventResult.handled;
+              }
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
@@ -539,38 +707,57 @@ class _PosViewState extends State<_PosView> with WindowListener {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  PosTopBar(
-                    lanOnline: server.isRunning,
-                    clientCount: server.clientRegistry.count,
-                    workspace: _workspace,
-                    onHome: () => widget.tableLabel != null
-                        ? context.go('/floor')
-                        : context.go('/menu'),
-                    homeIcon: widget.tableLabel != null
-                        ? Icons.arrow_back_rounded
-                        : Icons.home_outlined,
-                    homeTooltip: widget.tableLabel != null
-                        ? 'Retour aux tables'
-                        : 'Menu principal',
-                    onWorkspaceSelected: (w) => setState(() => _workspace = w),
-                    onSync: () {
-                      context.read<CatalogBloc>().add(const CatalogStarted());
-                      _loadCategoryCounts();
-                    },
-                    onPrint: () {
-                      final order = context.read<CartBloc>().state.orderOrNull;
-                      if (order != null) {
-                        _onProforma(order);
-                      }
-                    },
-                    onHistory: _openTreasury,
-                    onSettings: _openDashboard,
-                    onLanguageToggle: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Basculer AR — catalogue bilingue actif')),
+                  BlocBuilder<CartBloc, CartState>(
+                    builder: (context, cartState) {
+                      final order = cartState.orderOrNull;
+                      final itemCount = order?.activeItems.fold<int>(
+                            0,
+                            (sum, item) => sum + item.orderItem.quantity.toInt(),
+                          ) ??
+                          0;
+                      final totalAmount = order?.displayGrandTotal ?? 0.0;
+
+                      return PosTopBar(
+                        lanOnline: server.isRunning,
+                        clientCount: server.clientRegistry.count,
+                        workspace: _workspace,
+                        onHome: _onExitPos,
+                        homeIcon: widget.tableLabel != null
+                            ? Icons.arrow_back_rounded
+                            : Icons.home_outlined,
+                        homeTooltip: widget.tableLabel != null
+                            ? 'Retour aux tables'
+                            : 'Menu principal',
+                        onWorkspaceSelected: (w) =>
+                            setState(() => _workspace = w),
+                        onSync: () {
+                          context.read<CatalogBloc>().add(const CatalogStarted());
+                          _loadCategoryCounts();
+                        },
+                        onPrint: () {
+                          final order =
+                              context.read<CartBloc>().state.orderOrNull;
+                          if (order != null) {
+                            _onProforma(order);
+                          }
+                        },
+                        onHistory: _openTreasury,
+                        onSettings: _openDashboard,
+                        onLanguageToggle: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Basculer AR — catalogue bilingue actif',
+                              ),
+                            ),
+                          );
+                        },
+                        onServiceModeChanged: _onServiceModeChanged,
+                        tableName: widget.tableLabel,
+                        itemCount: itemCount,
+                        totalAmount: totalAmount,
                       );
                     },
-                    onServiceModeChanged: _onServiceModeChanged,
                   ),
             Expanded(
               child: BlocBuilder<CatalogBloc, CatalogState>(
@@ -629,6 +816,9 @@ class _PosViewState extends State<_PosView> with WindowListener {
                                     filter: _productFilter,
                                     onFilterChanged: (f) =>
                                         setState(() => _productFilter = f),
+                                    isCompactMode: _isCompactMode,
+                                    onCompactModeChanged: (val) =>
+                                        setState(() => _isCompactMode = val),
                                     onSort: () {},
                                   ),
                                 Expanded(
@@ -652,6 +842,8 @@ class _PosViewState extends State<_PosView> with WindowListener {
                                           cartState.orderTypeOrDefault,
                                         ),
                                         onProductTap: _onProductTap,
+                                        onProductLongPress: _onProductLongPress,
+                                        isCompactMode: _isCompactMode,
                                       );
                                     },
                                   ),
@@ -756,6 +948,7 @@ class _PosViewState extends State<_PosView> with WindowListener {
       ],
       ),
       ),
+    ),
       ),
       ),
     );

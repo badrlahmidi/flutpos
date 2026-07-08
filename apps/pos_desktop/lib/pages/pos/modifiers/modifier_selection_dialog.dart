@@ -248,7 +248,9 @@ class _ModifierGroupSection extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                group.name,
+                group.nameAr != null && group.nameAr!.isNotEmpty
+                    ? '${group.name} / ${group.nameAr}'
+                    : group.name,
                 style: theme.textTheme.titleMedium,
               ),
             ),
@@ -318,7 +320,9 @@ class _ModifierOptionTile extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  option.name,
+                  option.nameAr != null && option.nameAr!.isNotEmpty
+                      ? '${option.name} / ${option.nameAr}'
+                      : option.name,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: foreground,
                   ),

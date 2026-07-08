@@ -147,6 +147,9 @@ abstract class OrderRepository {
   /// Retire la demande de facture entreprise.
   Future<Order> clearEnterpriseInvoice(String orderId);
 
+  /// Assigne un client à la commande (pour le paiement en compte).
+  Future<Order> setOrderCustomer(String orderId, String? customerId);
+
   /// Prochain numéro de facture séquentiel.
   Future<int> peekNextInvoiceNumber();
 

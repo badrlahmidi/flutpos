@@ -113,6 +113,14 @@ class _MainMenuPageState extends State<MainMenuPage> {
         visible: true,
       ),
       _MenuTileData(
+        icon: Icons.monitor_heart_rounded,
+        label: 'SUIVI TABLES',
+        subtitle: 'Statut de préparation & service',
+        accent: isDark ? AppColors.accentBlue : AppColors.primary,
+        route: '/floor/monitor',
+        visible: true,
+      ),
+      _MenuTileData(
         icon: Icons.menu_book_rounded,
         label: 'CATALOGUE & MENU',
         subtitle: 'Plats, prix et modificateurs',
@@ -292,6 +300,12 @@ class _MainMenuPageState extends State<MainMenuPage> {
                     ],
                   ),
                 ),
+                // ── Daily Stats Bar ───────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.l, 0, AppSpacing.l, AppSpacing.s),
+                  child: _DailyStatsBar(isDark: isDark, scheme: scheme, theme: theme),
+                ),
                 // Centered Main Content
                 Expanded(
                   child: Center(
@@ -359,4 +373,161 @@ class _MenuTileData {
   final Color accent;
   final String route;
   final bool visible;
+}
+
+// ── Daily Stats Bar ───────────────────────────────────────────────────────────
+class _DailyStatsBar extends StatelessWidget {
+  const _DailyStatsBar({
+    required this.isDark,
+    required this.scheme,
+    required this.theme,
+  });
+  final bool isDark;
+  final ColorScheme scheme;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateFormat('EEEE d MMMM', 'fr_FR').format(DateTime.now());
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.s,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF1A1F2E)
+            : scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.calendar_today_rounded,
+            size: 14,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            today,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.l),
+          _StatChip(
+            icon: Icons.receipt_long_rounded,
+            label: '—',
+            hint: 'Commandes',
+            color: isDark ? AppColors.accentBlue : const Color(0xFF1D4ED8),
+          ),
+          const SizedBox(width: AppSpacing.s),
+          _StatChip(
+            icon: Icons.monetization_on_rounded,
+            label: '— DH',
+            hint: 'CA jour',
+            color: isDark ? AppColors.accentGreen : const Color(0xFF16A34A),
+          ),
+          const SizedBox(width: AppSpacing.s),
+          _StatChip(
+            icon: Icons.people_rounded,
+            label: '—',
+            hint: 'Couverts',
+            color: isDark ? AppColors.accentOrange : const Color(0xFFEA580C),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.accentGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppColors.accentGreen.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentGreen,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accentGreen.withValues(alpha: 0.5),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  'Service actif',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.accentGreen,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({
+    required this.icon,
+    required this.label,
+    required this.hint,
+    required this.color,
+  });
+  final IconData icon;
+  final String label;
+  final String hint;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 4),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+            Text(
+              hint,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontSize: 9,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }

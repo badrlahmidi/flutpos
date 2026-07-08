@@ -8,6 +8,7 @@ import '../../blocs/payment/payment_bloc.dart';
 import '../../blocs/payment/payment_event.dart';
 import '../../blocs/payment/payment_state.dart';
 import '../../di/service_locator.dart';
+import '../../../widgets/dialogs/customer_selection_dialog.dart';
 import '../../services/print/pos_print_service.dart';
 import '../../../utils/security_guard.dart';
 import '../../../utils/manager_auth.dart';
@@ -207,6 +208,14 @@ class _ReadyViewState extends State<_ReadyView> {
       final code = await showVoucherDialog(context);
       if (code != null && mounted) {
         context.read<PaymentBloc>().add(PaymentVoucherScanned(code));
+      }
+      return;
+    }
+    if (method == PaymentMethod.account) {
+      final customer = await showCustomerSelectionDialog(context);
+      if (customer != null && mounted) {
+        // We will need to update the order with the customerId and then pay
+        context.read<PaymentBloc>().add(PaymentMethodPressed(method, customerId: customer.id));
       }
       return;
     }
@@ -522,13 +531,32 @@ class _ChangeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final changeAmount = change.changeAmount;
 
-    return Card(
-      elevation: 0,
-      color: scheme.primaryContainer.withValues(alpha: 0.15),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: scheme.primary.withValues(alpha: 0.3)),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF14532D), const Color(0xFF166534)]
+              : [const Color(0xFFDCFCE7), const Color(0xFFBBF7D0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF16A34A).withValues(alpha: 0.4)
+              : const Color(0xFF86EFAC),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF16A34A).withValues(alpha: isDark ? 0.25 : 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.m),
@@ -536,33 +564,68 @@ class _ChangeCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Monnaie à rendre',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16A34A).withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.payments_rounded,
+                    color: isDark
+                        ? const Color(0xFF4ADE80)
+                        : const Color(0xFF16A34A),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Monnaie à rendre',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: isDark
+                          ? const Color(0xFF86EFAC)
+                          : const Color(0xFF15803D),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 Text(
-                  PriceFormatter.format(change.changeAmount),
+                  PriceFormatter.format(changeAmount),
                   style: AppTypography.priceStyle(scheme).copyWith(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: scheme.primary,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: isDark
+                        ? const Color(0xFF4ADE80)
+                        : const Color(0xFF15803D),
                   ),
                 ),
               ],
             ),
-            const Divider(height: AppSpacing.m),
-            MadVisualChange(breakdown: change.breakdown),
+            if (change.breakdown.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.m),
+              Container(
+                height: 1,
+                color: isDark
+                    ? const Color(0xFF16A34A).withValues(alpha: 0.3)
+                    : const Color(0xFF86EFAC),
+              ),
+              const SizedBox(height: AppSpacing.m),
+              MadVisualChange(breakdown: change.breakdown),
+            ],
           ],
         ),
       ),
     )
         .animate()
         .fadeIn(duration: 300.ms)
-        .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic);
+        .scale(
+          begin: const Offset(0.97, 0.97),
+          end: const Offset(1, 1),
+          curve: Curves.easeOutCubic,
+          duration: 300.ms,
+        );
   }
 }
 

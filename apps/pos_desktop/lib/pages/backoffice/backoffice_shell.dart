@@ -21,13 +21,6 @@ class BackofficeShell extends StatelessWidget {
     final location = GoRouterState.of(context).uri.path;
     final user = AppSession.instance.user;
 
-    final showMenu = location.startsWith('/backoffice/menu');
-    final showFinance = location.startsWith('/backoffice/treasury') || location.startsWith('/backoffice/accounting');
-    final showAnalyse = location.startsWith('/backoffice/analytics');
-    final showReservations = location.startsWith('/backoffice/reservations');
-    final showSettings = location.startsWith('/backoffice/settings');
-    final showSecurity = location.startsWith('/backoffice/security');
-
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? AppColors.scaffoldDark
@@ -51,102 +44,98 @@ class BackofficeShell extends StatelessWidget {
                     child: ListView(
                       padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
                       children: [
-                        if (showMenu)
-                          _SidebarGroup(
-                            title: 'MENU',
-                            items: [
-                              SidebarItem(
-                                icon: Icons.category_outlined,
-                                label: 'Catégories',
-                                path: '/backoffice/menu/categories',
-                                currentPath: location,
-                              ),
-                              SidebarItem(
-                                icon: Icons.inventory_2_outlined,
-                                label: 'Produits',
-                                path: '/backoffice/menu/products',
-                                currentPath: location,
-                              ),
-                              SidebarItem(
-                                icon: Icons.tune_outlined,
-                                label: 'Modificateurs',
-                                path: '/backoffice/menu/modifiers',
-                                currentPath: location,
-                              ),
-                              SidebarItem(
-                                icon: Icons.note_alt_outlined,
-                                label: 'Notes cuisine',
-                                path: '/backoffice/menu/notes',
-                                currentPath: location,
-                              ),
-                            ],
-                          ),
-                        if (showFinance)
-                          _SidebarGroup(
-                            title: 'FINANCE',
-                            items: [
-                              SidebarItem(
-                                icon: Icons.account_balance_wallet_outlined,
-                                label: 'Trésorerie',
-                                path: '/backoffice/treasury',
-                                currentPath: location,
-                              ),
-                              SidebarItem(
-                                icon: Icons.file_download_outlined,
-                                label: 'Export comptable',
-                                path: '/backoffice/accounting',
-                                currentPath: location,
-                              ),
-                            ],
-                          ),
-                        if (showAnalyse)
-                          _SidebarGroup(
-                            title: 'ANALYSE',
-                            items: [
-                              SidebarItem(
-                                icon: Icons.insights_outlined,
-                                label: 'Dashboard',
-                                path: '/backoffice/analytics',
-                                currentPath: location,
-                              ),
-                            ],
-                          ),
-                        if (showReservations)
-                          _SidebarGroup(
-                            title: 'AUTRES',
-                            items: [
-                              SidebarItem(
-                                icon: Icons.event_seat_outlined,
-                                label: 'Réservations',
-                                path: '/backoffice/reservations',
-                                currentPath: location,
-                              ),
-                            ],
-                          ),
-                        if (showSettings)
-                          _SidebarGroup(
-                            title: 'AUTRES',
-                            items: [
-                              SidebarItem(
-                                icon: Icons.settings_outlined,
-                                label: 'Paramètres',
-                                path: '/backoffice/settings',
-                                currentPath: location,
-                              ),
-                            ],
-                          ),
-                        if (showSecurity)
-                          _SidebarGroup(
-                            title: 'ADMINISTRATION',
-                            items: [
-                              SidebarItem(
-                                icon: Icons.shield_outlined,
-                                label: 'Utilisateurs & Sécurité',
-                                path: '/backoffice/security',
-                                currentPath: location,
-                              ),
-                            ],
-                          ),
+                        _SidebarGroup(
+                          title: 'MENU',
+                          items: [
+                            SidebarItem(
+                              icon: Icons.category_outlined,
+                              label: 'Catégories',
+                              path: '/backoffice/menu/categories',
+                              currentPath: location,
+                            ),
+                            SidebarItem(
+                              icon: Icons.inventory_2_outlined,
+                              label: 'Produits',
+                              path: '/backoffice/menu/products',
+                              currentPath: location,
+                            ),
+                            SidebarItem(
+                              icon: Icons.receipt_long_outlined,
+                              label: 'Ingrédients',
+                              path: '/backoffice/menu/ingredients',
+                              currentPath: location,
+                            ),
+                            SidebarItem(
+                              icon: Icons.tune_outlined,
+                              label: 'Modificateurs',
+                              path: '/backoffice/menu/modifiers',
+                              currentPath: location,
+                            ),
+                            SidebarItem(
+                              icon: Icons.note_alt_outlined,
+                              label: 'Notes cuisine',
+                              path: '/backoffice/menu/notes',
+                              currentPath: location,
+                            ),
+                          ],
+                        ),
+                        _SidebarGroup(
+                          title: 'FINANCE',
+                          items: [
+                            SidebarItem(
+                              icon: Icons.account_balance_wallet_outlined,
+                              label: 'Trésorerie',
+                              path: '/backoffice/treasury',
+                              currentPath: location,
+                            ),
+                            SidebarItem(
+                              icon: Icons.people_outline,
+                              label: 'Clients',
+                              path: '/backoffice/customers',
+                              currentPath: location,
+                            ),
+                            SidebarItem(
+                              icon: Icons.file_download_outlined,
+                              label: 'Export comptable',
+                              path: '/backoffice/accounting',
+                              currentPath: location,
+                            ),
+                            SidebarItem(
+                              icon: Icons.insights_outlined,
+                              label: 'Dashboard',
+                              path: '/backoffice/analytics',
+                              currentPath: location,
+                            ),
+                          ],
+                        ),
+                        _SidebarGroup(
+                          title: 'AUTRES',
+                          items: [
+                            SidebarItem(
+                              icon: Icons.event_seat_outlined,
+                              label: 'Réservations',
+                              path: '/backoffice/reservations',
+                              currentPath: location,
+                            ),
+                            SidebarItem(
+                              icon: Icons.settings_outlined,
+                              label: 'Paramètres',
+                              path: '/backoffice/settings',
+                              currentPath: location,
+                            ),
+                          ],
+                        ),
+                        _SidebarGroup(
+                          title: 'ADMINISTRATION',
+                          items: [
+                            SidebarItem(
+                              icon: Icons.shield_outlined,
+                              label: 'Utilisateurs & Sécurité',
+                              path: '/backoffice/security',
+                              currentPath: location,
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

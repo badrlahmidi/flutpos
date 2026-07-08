@@ -5,7 +5,8 @@ enum PaymentMethod {
   tpe('TPE'),
   cheque('CHEQUE'),
   voucher('VOUCHER'),
-  employeeMeal('EMPLOYEE_MEAL');
+  employeeMeal('EMPLOYEE_MEAL'),
+  account('ACCOUNT');
 
   const PaymentMethod(this.dbValue);
 
@@ -18,6 +19,7 @@ enum PaymentMethod {
         PaymentMethod.cheque => 'Chèque',
         PaymentMethod.voucher => 'Voucher',
         PaymentMethod.employeeMeal => 'Repas employé',
+        PaymentMethod.account => 'En compte',
       };
 
   static PaymentMethod? fromDb(String? value) {

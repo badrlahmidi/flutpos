@@ -346,6 +346,10 @@ class OrderRepositoryImpl implements OrderRepository {
       ),
     );
 
+    if (item.isFired) {
+      await _restoreStockForOrderItems([orderItemId]);
+    }
+
     return (_db.select(_db.orderItems)..where((i) => i.id.equals(orderItemId)))
         .getSingle();
   }
@@ -360,6 +364,48 @@ class OrderRepositoryImpl implements OrderRepository {
     await (_db.update(_db.orderItems)
           ..where((i) => i.id.isIn(ids)))
         .write(const OrderItemsCompanion(isFired: Value(true)));
+        
+    await _deductStockForOrderItems(ids);
+  }
+
+  Future<void> _deductStockForOrderItems(List<String> orderItemIds) async {
+    for (final itemId in orderItemIds) {
+      final item = await (_db.select(_db.orderItems)..where((i) => i.id.equals(itemId))).getSingleOrNull();
+      if (item == null) continue;
+
+      final recipes = await (_db.select(_db.recipeItems)..where((r) => r.productId.equals(item.productId))).get();
+      
+      for (final recipe in recipes) {
+        final totalDeduction = recipe.quantityUsed * item.quantity;
+        
+        // Deduct from ingredient stock
+        await _db.customUpdate(
+          'UPDATE ingredients SET current_stock = current_stock - ? WHERE id = ?',
+          variables: [Variable<double>(totalDeduction), Variable<String>(recipe.ingredientId)],
+          updates: {_db.ingredients},
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreStockForOrderItems(List<String> orderItemIds) async {
+    for (final itemId in orderItemIds) {
+      final item = await (_db.select(_db.orderItems)..where((i) => i.id.equals(itemId))).getSingleOrNull();
+      if (item == null) continue;
+
+      final recipes = await (_db.select(_db.recipeItems)..where((r) => r.productId.equals(item.productId))).get();
+      
+      for (final recipe in recipes) {
+        final totalRestored = recipe.quantityUsed * item.quantity;
+        
+        // Restore ingredient stock
+        await _db.customUpdate(
+          'UPDATE ingredients SET current_stock = current_stock + ? WHERE id = ?',
+          variables: [Variable<double>(totalRestored), Variable<String>(recipe.ingredientId)],
+          updates: {_db.ingredients},
+        );
+      }
+    }
   }
 
   @override
@@ -561,14 +607,33 @@ class OrderRepositoryImpl implements OrderRepository {
             paidAt: DateTime.now().toUtc(),
           ),
         );
+
+    if (method == PaymentMethod.account) {
+      final order = await (_db.select(_db.orders)..where((o) => o.id.equals(orderId))).getSingleOrNull();
+      if (order != null && order.customerId != null) {
+        // Increase the customer's debt
+        final customerId = order.customerId!;
+        final customer = await (_db.select(_db.customers)..where((c) => c.id.equals(customerId))).getSingleOrNull();
+        if (customer != null) {
+          await (_db.update(_db.customers)..where((c) => c.id.equals(customerId))).write(
+            CustomersCompanion(
+              accountBalance: Value(customer.accountBalance + amount),
+              updatedAt: Value(DateTime.now().toUtc()),
+            ),
+          );
+        }
+      }
+    }
     return (_db.select(_db.payments)..where((p) => p.id.equals(id)))
         .getSingle();
   }
 
   @override
   Future<Order> finalizeOrderIfFullyPaid(String orderId) async {
+    print('[DEBUG] finalizeOrderIfFullyPaid started for orderId: $orderId');
     final complete = await getCompleteOrder(orderId);
     if (complete == null) {
+      print('[DEBUG] finalizeOrderIfFullyPaid: order not found');
       throw StateError('Commande introuvable');
     }
 
@@ -576,17 +641,34 @@ class OrderRepositoryImpl implements OrderRepository {
       lines: PaymentOrderMapper.toLineInputs(complete),
       discount: PaymentOrderMapper.toDiscountInput(complete.order),
     );
+
+    print('[DEBUG] finalizeOrderIfFullyPaid: grandTotal=${totals.grandTotal}, totalPaid=${complete.totalPaid}');
     final remaining = roundMoney(totals.grandTotal - complete.totalPaid);
     if (remaining > 0.009) {
+      print('[DEBUG] finalizeOrderIfFullyPaid: remaining > 0 ($remaining), returning early.');
       return complete.order;
     }
 
+    print('[DEBUG] finalizeOrderIfFullyPaid: fully paid, updating status to PAID');
     await (_db.update(_db.orders)..where((o) => o.id.equals(orderId))).write(
           OrdersCompanion(
             status: const Value('PAID'),
             updatedAt: Value(DateTime.now().toUtc()),
           ),
         );
+
+    final unfiredItemIds = complete.items
+        .where((i) => !i.orderItem.isFired && i.orderItem.status != 'VOIDED')
+        .map((i) => i.orderItem.id)
+        .toList();
+
+    if (unfiredItemIds.isNotEmpty) {
+      print('[DEBUG] finalizeOrderIfFullyPaid: updating ${unfiredItemIds.length} unfired items');
+      await _deductStockForOrderItems(unfiredItemIds);
+      await (_db.update(_db.orderItems)..where((i) => i.id.isIn(unfiredItemIds)))
+          .write(const OrderItemsCompanion(isFired: Value(true)));
+    }
+
 
     await issueInvoiceNumberIfNeeded(orderId);
     await _releaseTableIfNoOpenOrders(complete.order.tableId);
@@ -628,6 +710,18 @@ class OrderRepositoryImpl implements OrderRepository {
           OrdersCompanion(
             companyName: const Value(null),
             companyIce: const Value(null),
+            updatedAt: Value(DateTime.now().toUtc()),
+          ),
+        );
+    return (_db.select(_db.orders)..where((o) => o.id.equals(orderId)))
+        .getSingle();
+  }
+
+  @override
+  Future<Order> setOrderCustomer(String orderId, String? customerId) async {
+    await (_db.update(_db.orders)..where((o) => o.id.equals(orderId))).write(
+          OrdersCompanion(
+            customerId: Value(customerId),
             updatedAt: Value(DateTime.now().toUtc()),
           ),
         );
@@ -821,7 +915,12 @@ class OrderRepositoryImpl implements OrderRepository {
     }
 
     if (tableId != null) {
-      await _setTableStatus(tableId, 'OCCUPIED');
+      final status = orderMap['status'] as String? ?? 'OPEN';
+      if (const {'OPEN', 'SENT', 'PROFORMA'}.contains(status)) {
+        await _setTableStatus(tableId, 'OCCUPIED');
+      } else {
+        await _releaseTableIfNoOpenOrders(tableId);
+      }
     }
 
     final remoteItems = snapshot['items'] as List<dynamic>? ?? [];
@@ -904,12 +1003,16 @@ class OrderRepositoryImpl implements OrderRepository {
   }
 
   Future<void> _releaseTableIfNoOpenOrders(String? tableId) async {
+    print('[DEBUG] _releaseTableIfNoOpenOrders: started for tableId: $tableId');
     if (tableId == null) {
       return;
     }
     final stillOpen = await getOpenOrderForTable(tableId);
     if (stillOpen == null) {
+      print('[DEBUG] _releaseTableIfNoOpenOrders: no open orders found, setting table to FREE');
       await _setTableStatus(tableId, 'FREE');
+    } else {
+      print('[DEBUG] _releaseTableIfNoOpenOrders: found open order: ${stillOpen.id} with status ${stillOpen.status}, NOT setting to FREE');
     }
   }
 

@@ -25,6 +25,53 @@ class TopProductSale {
   final double revenue;
 }
 
+/// Répartition par mode de paiement.
+class PaymentMethodBreakdown {
+  const PaymentMethodBreakdown({
+    required this.method,
+    required this.label,
+    required this.amount,
+    required this.count,
+  });
+
+  final String method;
+  final String label;
+  final double amount;
+  final int count;
+}
+
+/// Répartition par catégorie.
+class CategoryBreakdown {
+  const CategoryBreakdown({
+    required this.categoryId,
+    required this.categoryName,
+    required this.revenue,
+    required this.quantity,
+  });
+
+  final String categoryId;
+  final String categoryName;
+  final double revenue;
+  final double quantity;
+}
+
+/// Performance serveur (classement).
+class WaiterPerformance {
+  const WaiterPerformance({
+    required this.userId,
+    required this.userName,
+    required this.ticketCount,
+    required this.totalRevenue,
+    required this.averageBasket,
+  });
+
+  final String userId;
+  final String userName;
+  final int ticketCount;
+  final double totalRevenue;
+  final double averageBasket;
+}
+
 /// Synthèse analytique journalière (dashboard backoffice).
 class DailyAnalyticsSnapshot {
   const DailyAnalyticsSnapshot({
@@ -40,6 +87,9 @@ class DailyAnalyticsSnapshot {
     required this.foodCostTheoretical,
     required this.foodCostGap,
     required this.foodCostRatioPercent,
+    this.paymentBreakdown = const [],
+    this.categoryBreakdown = const [],
+    this.waiterPerformance = const [],
   });
 
   final DateTime day;
@@ -62,4 +112,13 @@ class DailyAnalyticsSnapshot {
 
   /// Coût / CA × 100 (0 si pas de recettes).
   final double foodCostRatioPercent;
+
+  /// Répartition par mode de paiement.
+  final List<PaymentMethodBreakdown> paymentBreakdown;
+
+  /// Répartition par catégorie.
+  final List<CategoryBreakdown> categoryBreakdown;
+
+  /// Performance des serveurs.
+  final List<WaiterPerformance> waiterPerformance;
 }

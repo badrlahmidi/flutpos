@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -48,10 +49,15 @@ class _AuthViewState extends State<_AuthView> {
   late Timer _clockTimer;
   String _currentTime = _timeFormat.format(DateTime.now());
   int _shakeTick = 0;
+  
+  final _focusNode = FocusNode();
+  String _barcodeBuffer = '';
+  Timer? _barcodeDebounce;
 
   @override
   void initState() {
     super.initState();
+    _focusNode.requestFocus();
     _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) {
         setState(() {
@@ -64,7 +70,48 @@ class _AuthViewState extends State<_AuthView> {
   @override
   void dispose() {
     _clockTimer.cancel();
+    _focusNode.dispose();
+    _barcodeDebounce?.cancel();
     super.dispose();
+  }
+
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) return;
+
+    final char = event.character;
+    if (char != null && char.isNotEmpty) {
+      _barcodeBuffer += char;
+      _barcodeDebounce?.cancel();
+      _barcodeDebounce = Timer(const Duration(milliseconds: 50), () {
+        if (_barcodeBuffer.isNotEmpty) {
+          _processBarcode(_barcodeBuffer.trim());
+          _barcodeBuffer = '';
+        }
+      });
+    } else if (event.logicalKey == LogicalKeyboardKey.enter) {
+      _barcodeDebounce?.cancel();
+      if (_barcodeBuffer.isNotEmpty) {
+        _processBarcode(_barcodeBuffer.trim());
+        _barcodeBuffer = '';
+      }
+    }
+  }
+
+  void _processBarcode(String barcode) {
+    // Si le code commence par user:, on extrait le PIN
+    // Sinon, on suppose que c'est le PIN directement
+    final pin = barcode.startsWith('user:') ? barcode.substring(5) : barcode;
+    
+    // Nettoyer l'état précédent et soumettre le PIN complet
+    final bloc = context.read<AuthBloc>();
+    bloc.add(const AuthPinClearPressed());
+    
+    // Pour que le login se lance, on doit ajouter les chiffres un par un, 
+    // ou ajouter une méthode spéciale dans l'AuthBloc.
+    // Simuler la frappe des chiffres :
+    for (var i = 0; i < pin.length; i++) {
+      bloc.add(AuthPinDigitPressed(pin[i]));
+    }
   }
 
   @override
@@ -73,8 +120,12 @@ class _AuthViewState extends State<_AuthView> {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      body: DecoratedBox(
+    return KeyboardListener(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: Scaffold(
+        body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: RadialGradient(
             center: const Alignment(0, -0.3),
@@ -402,7 +453,7 @@ class _AuthViewState extends State<_AuthView> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   AuthScreenMode _modeFor(AuthState state, AuthScreenMode blocMode) {

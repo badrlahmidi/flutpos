@@ -18,6 +18,8 @@ class ProductCard extends StatelessWidget {
     this.isFavorite = false,
     this.productType = 'standard',
     this.onFavoriteToggle,
+    this.accentColor,
+    this.onLongPress,
   });
 
   final String name;
@@ -30,9 +32,159 @@ class ProductCard extends StatelessWidget {
   final bool isFavorite;
   final String productType;
   final VoidCallback? onFavoriteToggle;
+  final Color? accentColor;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
+    final fallbackColor = PosDesignTokens.primaryBlue;
+    final colorAccent = accentColor ?? fallbackColor;
+
+    if (!hasImage) {
+      // Tuile ultra-compacte pour saisie rapide (restauration/café sans images)
+      return Material(
+        color: PosDesignTokens.cardBackground,
+        borderRadius: BorderRadius.circular(PosDesignTokens.radiusMd),
+        elevation: 0,
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          borderRadius: BorderRadius.circular(PosDesignTokens.radiusMd),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(PosDesignTokens.radiusMd),
+              border: Border.all(color: PosDesignTokens.borderLight),
+              boxShadow: PosDesignTokens.cardShadow,
+            ),
+            child: Stack(
+              children: [
+                // Accent de couleur sur la gauche
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 5,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colorAccent,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(PosDesignTokens.radiusMd),
+                        bottomLeft: Radius.circular(PosDesignTokens.radiusMd),
+                      ),
+                    ),
+                  ),
+                ),
+                // Contenu de la tuile
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                              height: 1.2,
+                            ),
+                          ),
+                          if (subtitle != null && subtitle!.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              subtitle!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: PosDesignTokens.textMuted,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            PriceFormatter.format(price),
+                            style: AppTypography.priceStyle(
+                              Theme.of(context).colorScheme,
+                            ).copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (!inStock)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: PosDesignTokens.offlineRed.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Rupture',
+                                style: TextStyle(
+                                  color: PosDesignTokens.offlineRed,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Favoris
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Material(
+                    color: Colors.transparent,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      onTap: onFavoriteToggle,
+                      customBorder: const CircleBorder(),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          isFavorite ? Icons.favorite : Icons.favorite_border,
+                          size: 14,
+                          color: isFavorite ? Colors.redAccent : PosDesignTokens.textMuted.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Recette / Composé
+                if (productType == 'composed')
+                  Positioned(
+                    top: 6,
+                    right: 24,
+                    child: Icon(
+                      Icons.menu_book,
+                      color: PosDesignTokens.primaryBlue.withValues(alpha: 0.7),
+                      size: 12,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Material(
       color: PosDesignTokens.cardBackground,
       borderRadius: BorderRadius.circular(PosDesignTokens.radiusLg),
@@ -40,6 +192,7 @@ class ProductCard extends StatelessWidget {
       shadowColor: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(PosDesignTokens.radiusLg),
         child: Ink(
           decoration: BoxDecoration(

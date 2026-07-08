@@ -234,4 +234,52 @@ void main() {
     final mainComplete = await orders.getCompleteOrder(main.id);
     expect(mainComplete?.items.first.orderItem.quantity, 1);
   });
+
+  test('paying order in full frees the table status', () async {
+    final sessionId = await _openSession();
+    final order = await orders.openTableOrder(
+      sessionId: sessionId,
+      waiterId: userId,
+      tableId: tableS1,
+    );
+
+    await db.into(db.categories).insert(
+          CategoriesCompanion.insert(id: const Value('cat'), name: 'Boissons'),
+        );
+    const cocaId = 'prod-coca';
+    await db.into(db.products).insert(
+          ProductsCompanion.insert(
+            id: const Value(cocaId),
+            categoryId: 'cat',
+            name: 'Coca',
+            priceDineIn: 18,
+          ),
+        );
+    final coca = await (db.select(db.products)
+          ..where((p) => p.id.equals(cocaId)))
+        .getSingle();
+
+    await orders.addOrderItem(
+      orderId: order.id,
+      product: coca,
+      orderType: OrderType.dineIn,
+      quantity: 1,
+    );
+
+    final complete = (await orders.getCompleteOrder(order.id))!;
+    final due = complete.computedTotals.grandTotal;
+
+    await orders.addPayment(
+      orderId: order.id,
+      method: PaymentMethod.cash,
+      amount: due,
+    );
+
+    await orders.finalizeOrderIfFullyPaid(order.id);
+
+    final tableRow = await (db.select(db.restaurantTables)
+          ..where((t) => t.id.equals(tableS1)))
+        .getSingle();
+    expect(tableRow.status, 'FREE');
+  });
 }

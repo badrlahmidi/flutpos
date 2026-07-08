@@ -415,12 +415,14 @@ class _CartFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return DecoratedBox(
       decoration: BoxDecoration(
         color: PosDesignTokens.cardBackground,
-        border: Border(top: BorderSide(color: scheme.outline)),
+        border: Border(top: BorderSide(color: PosDesignTokens.borderLight)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -430,18 +432,19 @@ class _CartFooter extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ── Totals ───────────────────────────────────────────────────
             _TotalLine('Sous-total', PriceFormatter.format(subtotal)),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             _TotalLine(
               'TVA (${taxRateLabel.toStringAsFixed(0)} %)',
               PriceFormatter.format(taxAmount),
             ),
             if (discountAmount > 0) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               _TotalLine(
                 'Remise',
                 '- ${PriceFormatter.format(discountAmount)}',
@@ -449,16 +452,16 @@ class _CartFooter extends StatelessWidget {
                 onEdit: onDiscount,
               ),
             ],
-            const Divider(height: 20),
+            Divider(height: 18, color: PosDesignTokens.borderLight),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'TOTAL',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
+                    letterSpacing: 0.8,
                     color: PosDesignTokens.textMuted,
                   ),
                 ),
@@ -468,55 +471,78 @@ class _CartFooter extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+
+            // ── Secondary Actions Row ─────────────────────────────────────
             Row(
               children: [
                 Expanded(
-                  child: _SecondaryAction(
+                  child: _HudActionButton(
                     label: 'REMISE',
-                    onPressed:
-                        hasItems && !isOrderLocked ? onDiscount : null,
+                    keyHint: 'F1',
+                    icon: Icons.discount_outlined,
+                    onPressed: hasItems && !isOrderLocked ? onDiscount : null,
+                    isDark: isDark,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
-                  child: _SecondaryAction(
+                  child: _HudActionButton(
                     label: 'PROFORMA',
+                    keyHint: 'F2',
+                    icon: Icons.receipt_long_outlined,
                     onPressed: hasItems && !isProforma && !isOrderLocked
                         ? onProforma
                         : null,
+                    isDark: isDark,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
-                  child: _SecondaryAction(
-                    label: 'EN ATTENTE',
+                  child: _HudActionButton(
+                    label: 'ATTENTE',
+                    keyHint: 'F3',
+                    icon: Icons.pause_circle_outlined,
                     onPressed: null,
+                    isDark: isDark,
                   ),
                 ),
               ],
             ),
             if (canClaimNextCourse) ...[
-              const SizedBox(height: 8),
-              _PrimaryAction(
+              const SizedBox(height: 6),
+              _KitchenButton(
                 label: 'RÉCLAMER LA SUITE',
                 icon: Icons.restaurant_menu,
-                color: PosDesignTokens.primaryBlueDark,
+                color: isDark
+                    ? PosDesignTokens.primaryBlueDark
+                    : const Color(0xFF1A237E),
+                keyHint: null,
                 onPressed: hasItems ? onClaimNextCourse : null,
               ),
             ],
-            const SizedBox(height: 8),
-            _PrimaryAction(
+            const SizedBox(height: 6),
+
+            // ── Send to Kitchen ───────────────────────────────────────────
+            _KitchenButton(
               label: 'ENVOYER EN CUISINE',
-              icon: Icons.restaurant,
+              icon: Icons.soup_kitchen_rounded,
               color: PosDesignTokens.primaryBlue,
-              onPressed: hasItems ? onSendToKitchen : null,
+              keyHint: 'F4',
+              onPressed: hasItems && !isOrderLocked ? onSendToKitchen : null,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
+
+            // ── Pay Button ────────────────────────────────────────────────
             _PayButton(
-              label: 'PAYER ${PriceFormatter.format(total)}',
+              amount: total,
               onPressed: hasItems ? onPay : null,
+              isDark: isDark,
             ),
+
+            // ── Keyboard HUD strip ────────────────────────────────────────
+            const SizedBox(height: 8),
+            _KeyboardHud(isDark: isDark),
           ],
         ),
       ),
@@ -524,53 +550,352 @@ class _CartFooter extends StatelessWidget {
   }
 }
 
+// ── New Premium Pay Button ────────────────────────────────────────────────────
 class _PayButton extends StatelessWidget {
-  const _PayButton({required this.label, this.onPressed});
+  const _PayButton({required this.amount, required this.isDark, this.onPressed});
 
-  final String label;
+  final double amount;
+  final bool isDark;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final isEnabled = onPressed != null;
     return Material(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onPressed,
         child: Ink(
-          height: 64,
+          height: 60,
           decoration: BoxDecoration(
-            gradient: onPressed != null
+            gradient: isEnabled
                 ? LinearGradient(
-                    colors: [
-                      PosDesignTokens.stockGreen,
-                      Color(0xFF22C55E),
-                    ],
+                    colors: isDark
+                        ? [const Color(0xFF16A34A), const Color(0xFF22C55E)]
+                        : [const Color(0xFF15803D), const Color(0xFF22C55E)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   )
                 : null,
-            color: onPressed == null ? PosDesignTokens.borderLight : null,
-            borderRadius: BorderRadius.circular(12),
+            color: isEnabled ? null : PosDesignTokens.borderLight,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: isEnabled
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF16A34A).withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: isEnabled ? Colors.white : PosDesignTokens.textMuted,
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'PAYER',
+                        style: TextStyle(
+                          color:
+                              isEnabled ? Colors.white : PosDesignTokens.textMuted,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      if (isEnabled)
+                        Text(
+                          PriceFormatter.format(amount),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: isEnabled ? 0.2 : 0.0),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: isEnabled ? 0.4 : 0.0),
+                    ),
+                  ),
+                  child: Text(
+                    'F5',
+                    style: TextStyle(
+                      color: isEnabled
+                          ? Colors.white
+                          : PosDesignTokens.textMuted,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── HUD secondary action button (icon + key badge) ────────────────────────────
+class _HudActionButton extends StatelessWidget {
+  const _HudActionButton({
+    required this.label,
+    required this.keyHint,
+    required this.icon,
+    required this.isDark,
+    this.onPressed,
+  });
+
+  final String label;
+  final String keyHint;
+  final IconData icon;
+  final bool isDark;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = onPressed != null;
+    final baseColor = isEnabled
+        ? (isDark ? Colors.white70 : const Color(0xFF334155))
+        : PosDesignTokens.textMuted;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: isEnabled
+                  ? PosDesignTokens.borderLight
+                  : PosDesignTokens.borderLight.withValues(alpha: 0.5),
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.account_balance_wallet_outlined,
-                color: onPressed != null ? Colors.white : PosDesignTokens.textMuted,
-              ),
-              const SizedBox(width: 10),
+              Icon(icon, size: 16, color: baseColor),
+              const SizedBox(height: 2),
               Text(
                 label,
                 style: TextStyle(
-                  color: onPressed != null ? Colors.white : PosDesignTokens.textMuted,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: baseColor,
+                  letterSpacing: 0.3,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 3),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: isEnabled
+                      ? PosDesignTokens.primaryBlue.withValues(alpha: 0.12)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: isEnabled
+                        ? PosDesignTokens.primaryBlue.withValues(alpha: 0.3)
+                        : Colors.transparent,
+                  ),
+                ),
+                child: Text(
+                  keyHint,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: isEnabled
+                        ? PosDesignTokens.primaryBlue
+                        : PosDesignTokens.textMuted,
+                  ),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Kitchen action button (full-width pill with shortcut badge) ────────────────
+class _KitchenButton extends StatelessWidget {
+  const _KitchenButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.keyHint,
+    this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final String? keyHint;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = onPressed != null;
+    return Material(
+      color: isEnabled ? color.withValues(alpha: 0.1) : Colors.transparent,
+      borderRadius: BorderRadius.circular(11),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(11),
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(
+              color: isEnabled
+                  ? color.withValues(alpha: 0.5)
+                  : PosDesignTokens.borderLight,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: isEnabled ? color : PosDesignTokens.textMuted,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: isEnabled ? color : PosDesignTokens.textMuted,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+              if (keyHint != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isEnabled
+                        ? color.withValues(alpha: 0.15)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(
+                      color: isEnabled
+                          ? color.withValues(alpha: 0.4)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Text(
+                    keyHint!,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: isEnabled ? color : PosDesignTokens.textMuted,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Keyboard HUD strip (bottom hints bar) ─────────────────────────────────────
+class _KeyboardHud extends StatelessWidget {
+  const _KeyboardHud({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = isDark
+        ? Colors.white.withValues(alpha: 0.3)
+        : const Color(0xFF94A3B8);
+    final keyBg = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : const Color(0xFFF1F5F9);
+    final keyBorder = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : const Color(0xFFCBD5E1);
+
+    Widget key(String label) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+          decoration: BoxDecoration(
+            color: keyBg,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: keyBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+                blurRadius: 1,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: textColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 9,
+            ),
+          ),
+        );
+
+    Widget hint(String keyLabel, String action) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            key(keyLabel),
+            const SizedBox(width: 3),
+            Text(
+              action,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: textColor,
+                fontSize: 9,
+              ),
+            ),
+          ],
+        );
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        hint('F1', 'Remise'),
+        hint('F2', 'Proforma'),
+        hint('F4', 'Cuisine'),
+        hint('F5', 'Payer'),
+        hint('Esc', 'Retour'),
+      ],
     );
   }
 }
@@ -684,62 +1009,7 @@ class _TotalLine extends StatelessWidget {
   }
 }
 
-class _SecondaryAction extends StatelessWidget {
-  const _SecondaryAction({required this.label, this.onPressed});
 
-  final String label;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        side: BorderSide(color: PosDesignTokens.borderLight),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
-
-class _PrimaryAction extends StatelessWidget {
-  const _PrimaryAction({
-    required this.label,
-    required this.icon,
-    required this.color,
-    this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 20),
-      label: Text(label),
-      style: FilledButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        minimumSize: const Size(double.infinity, 48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-      ),
-    );
-  }
-}
 
 class _EmptyCart extends StatelessWidget {
   const _EmptyCart();

@@ -31,6 +31,10 @@ void configureDependencies(AppDatabase database) {
     () => ProductRepositoryImpl(sl<AppDatabase>()),
   );
 
+  sl.registerLazySingleton<CustomerRepository>(
+    () => CustomerRepositoryImpl(sl<AppDatabase>()),
+  );
+
   sl.registerLazySingleton<SecurityRepository>(
     () => SecurityRepositoryImpl(
       sl<AppDatabase>(),

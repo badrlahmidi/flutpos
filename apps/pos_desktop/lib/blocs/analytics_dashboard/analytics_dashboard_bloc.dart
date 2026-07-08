@@ -11,28 +11,39 @@ class AnalyticsDashboardBloc
         super(const AnalyticsDashboardInitial()) {
     on<AnalyticsDashboardStarted>(_onStarted);
     on<AnalyticsDashboardRefreshRequested>(_onRefresh);
+    on<AnalyticsDashboardDateChanged>(_onDateChanged);
   }
 
   final AnalyticsRepository _analytics;
+  DateTime _currentDate = DateTime.now();
 
   Future<void> _onStarted(
     AnalyticsDashboardStarted event,
     Emitter<AnalyticsDashboardState> emit,
   ) async {
-    await _load(emit);
+    await _load(emit, _currentDate);
   }
 
   Future<void> _onRefresh(
     AnalyticsDashboardRefreshRequested event,
     Emitter<AnalyticsDashboardState> emit,
   ) async {
-    await _load(emit);
+    await _load(emit, _currentDate);
   }
 
-  Future<void> _load(Emitter<AnalyticsDashboardState> emit) async {
+  Future<void> _onDateChanged(
+    AnalyticsDashboardDateChanged event,
+    Emitter<AnalyticsDashboardState> emit,
+  ) async {
+    _currentDate = event.date;
+    await _load(emit, _currentDate);
+  }
+
+  Future<void> _load(Emitter<AnalyticsDashboardState> emit, DateTime day) async {
     emit(const AnalyticsDashboardLoading());
     try {
-      final snapshot = await _analytics.loadDailyDashboard();
+      final snapshot = await _analytics.loadDailyDashboard(day: day);
+
       emit(AnalyticsDashboardReady(snapshot));
     } catch (e) {
       emit(AnalyticsDashboardError('$e'));

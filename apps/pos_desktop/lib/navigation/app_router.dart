@@ -12,11 +12,14 @@ import '../pages/backoffice/menu_management/categories_page.dart';
 import '../pages/backoffice/menu_management/modifiers_page.dart';
 import '../pages/backoffice/menu_management/notes_page.dart';
 import '../pages/backoffice/menu_management/products_page.dart';
+import '../pages/backoffice/menu_management/ingredients_page.dart';
 import '../pages/backoffice/treasury/treasury_page.dart';
+import '../pages/backoffice/customers/customers_admin_page.dart';
 import '../pages/backoffice/security/users_security_page.dart';
 import '../pages/backoffice/settings/settings_page.dart';
 import '../pages/floor_plan/floor_plan_page.dart';
 import '../pages/floor_plan/split_bill_page.dart';
+import '../pages/floor_plan/active_table_monitor_page.dart';
 import '../pages/kds/kds_page.dart';
 import '../pages/main_menu/main_menu_page.dart';
 import '../pages/payment/payment_page.dart';
@@ -62,7 +65,7 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/menu',
-      pageBuilder: (context, state) => fadeSlidePage(
+      pageBuilder: (context, state) => scaleUpPage(
         state: state,
         child: MainMenuPage(user: _requireUser()),
       ),
@@ -71,7 +74,7 @@ final appRouter = GoRouter(
       path: '/pos',
       pageBuilder: (context, state) {
         final user = _requireUser();
-        return fadeSlidePage(
+        return slideLeftPage(
           state: state,
           child: PosPage(
             user: user,
@@ -83,14 +86,21 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/floor',
-      pageBuilder: (context, state) => fadeSlidePage(
+      pageBuilder: (context, state) => slideLeftPage(
         state: state,
         child: FloorPlanPage(user: _requireUser()),
       ),
     ),
     GoRoute(
+      path: '/floor/monitor',
+      pageBuilder: (context, state) => slideLeftPage(
+        state: state,
+        child: ActiveTableMonitorPage(user: _requireUser()),
+      ),
+    ),
+    GoRoute(
       path: '/kds',
-      pageBuilder: (context, state) => fadeSlidePage(
+      pageBuilder: (context, state) => slideLeftPage(
         state: state,
         child: const KdsPage(),
       ),
@@ -99,7 +109,7 @@ final appRouter = GoRouter(
       path: '/payment/:orderId',
       pageBuilder: (context, state) {
         final orderId = state.pathParameters['orderId']!;
-        return fadeSlidePage(
+        return slideLeftPage(
           state: state,
           child: PaymentPage(orderId: orderId, user: _requireUser()),
         );
@@ -107,7 +117,7 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/treasury',
-      pageBuilder: (context, state) => fadeSlidePage(
+      pageBuilder: (context, state) => scaleUpPage(
         state: state,
         child: Scaffold(
           body: TreasuryPage(
@@ -122,14 +132,14 @@ final appRouter = GoRouter(
       pageBuilder: (context, state) {
         final extra = state.extra;
         if (extra is! ZCloseRouteArgs) {
-          return fadeSlidePage(
+          return scaleUpPage(
             state: state,
             child: const Scaffold(
               body: Center(child: Text('Paramètres clôture manquants')),
             ),
           );
         }
-        return fadeSlidePage(
+        return scaleUpPage(
           state: state,
           child: ZClosePage(user: extra.user, report: extra.report),
         );
@@ -141,14 +151,14 @@ final appRouter = GoRouter(
         final orderId = state.uri.queryParameters['orderId'];
         final tableName = state.uri.queryParameters['tableName'] ?? '';
         if (orderId == null) {
-          return fadeSlidePage(
+          return scaleUpPage(
             state: state,
             child: const Scaffold(
               body: Center(child: Text('Commande introuvable')),
             ),
           );
         }
-        return fadeSlidePage(
+        return scaleUpPage(
           state: state,
           child: SplitBillPage(
             sourceOrderId: orderId,
@@ -163,69 +173,119 @@ final appRouter = GoRouter(
       routes: [
         GoRoute(
           path: '/backoffice/menu/categories',
-          builder: (context, state) => const CategoriesPage(),
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: const CategoriesPage(),
+          ),
         ),
         GoRoute(
           path: '/backoffice/menu/products',
-          builder: (context, state) => const ProductsPage(),
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: const ProductsPage(),
+          ),
         ),
         GoRoute(
           path: '/backoffice/menu/modifiers',
-          builder: (context, state) => const ModifiersPage(),
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: const ModifiersPage(),
+          ),
         ),
         GoRoute(
           path: '/backoffice/menu/notes',
-          builder: (context, state) => const NotesPage(),
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: const NotesPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/backoffice/menu/ingredients',
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: const IngredientsPage(),
+          ),
         ),
         GoRoute(
           path: '/backoffice/treasury',
-          builder: (context, state) => TreasuryPage(
-            user: _requireUser(),
-            embeddedInShell: true,
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: TreasuryPage(
+              user: _requireUser(),
+              embeddedInShell: true,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/backoffice/customers',
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: const CustomersAdminPage(),
           ),
         ),
         GoRoute(
           path: '/backoffice/treasury/z-close',
-          builder: (context, state) {
+          pageBuilder: (context, state) {
             final extra = state.extra;
             if (extra is! ZCloseRouteArgs) {
-              return const Center(
-                child: Text('Accédez via la trésorerie pour la clôture Z'),
+              return fadeThroughPage(
+                state: state,
+                child: const Center(
+                  child: Text('Accédez via la trésorerie pour la clôture Z'),
+                ),
               );
             }
-            return ZClosePage(
-              user: extra.user,
-              report: extra.report,
-              embeddedInShell: true,
+            return fadeThroughPage(
+              state: state,
+              child: ZClosePage(
+                user: extra.user,
+                report: extra.report,
+                embeddedInShell: true,
+              ),
             );
           },
         ),
         GoRoute(
           path: '/backoffice/analytics',
-          builder: (context, state) => const ReportingPage(
-            embeddedInShell: true,
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: const ReportingPage(
+              embeddedInShell: true,
+            ),
           ),
         ),
         GoRoute(
           path: '/backoffice/accounting',
-          builder: (context, state) => const AccountingExportPage(
-            embeddedInShell: true,
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: const AccountingExportPage(
+              embeddedInShell: true,
+            ),
           ),
         ),
         GoRoute(
           path: '/backoffice/reservations',
-          builder: (context, state) => ReservationsPage(
-            user: _requireUser(),
-            embeddedInShell: true,
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: ReservationsPage(
+              user: _requireUser(),
+              embeddedInShell: true,
+            ),
           ),
         ),
         GoRoute(
           path: '/backoffice/settings',
-          builder: (context, state) => const SettingsPage(),
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: const SettingsPage(),
+          ),
         ),
         GoRoute(
           path: '/backoffice/security',
-          builder: (context, state) => const UsersSecurityPage(),
+          pageBuilder: (context, state) => fadeThroughPage(
+            state: state,
+            child: const UsersSecurityPage(),
+          ),
         ),
       ],
     ),
