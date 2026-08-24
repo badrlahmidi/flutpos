@@ -38,7 +38,16 @@ class SyncQueueManager {
     print('[SyncQueueManager] Enqueued ${envelope.action} (${envelope.messageId})');
   }
 
-  /// Envoie toutes les entrées `PENDING_SYNC` via le client réseau.
+  /// Envoie toutes les entrées en attente via le client réseau.
+  ///
+  /// Durabilité offline-first : une entrée reste `PENDING_SYNC` jusqu'à la
+  /// réception de l'ACK serveur ([onAck]). Si la connexion tombe entre
+  /// l'envoi et l'acquittement, elle est renvoyée au prochain flush —
+  /// la dédup messageId côté caisse et les orderItemId déterministes
+  /// rendent cette reprise idempotente.
+  ///
+  /// Les entrées `SENT` héritées d'anciennes versions (marquées avant ACK,
+  /// donc potentiellement orphelines) sont re-envoyées elles aussi.
   Future<void> flush(NetworkSender client) async {
     if (!client.isConnected) {
       print('[SyncQueueManager] Flush ignoré — client déconnecté.');
@@ -47,11 +56,15 @@ class SyncQueueManager {
 
     final pending = await (_database.select(_database.syncQueue)
           ..where(
-            (row) => row.status.equals(SyncQueueStatus.pendingSync),
+            (row) => row.status.isIn([
+              SyncQueueStatus.pendingSync,
+              SyncQueueStatus.sent,
+            ]),
           )
           ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]))
         .get();
 
+    var sentCount = 0;
     for (final entry in pending) {
       final envelope = EventSerializer.decode(entry.payload);
       if (envelope == null) {
@@ -59,19 +72,30 @@ class SyncQueueManager {
         continue;
       }
 
-      await client.sendDirect(envelope);
+      try {
+        await client.sendDirect(envelope);
+        sentCount++;
+      } catch (_) {
+        await _markFailed(entry.id, entry.retryCount);
+        continue;
+      }
+      // L'entrée reste PENDING_SYNC jusqu'à l'ACK : un crash ici ne perd
+      // pas le message, il sera renvoyé au prochain flush. Les anciennes
+      // lignes SENT sont normalisées vers ce flux durable.
       await (_database.update(_database.syncQueue)
             ..where((row) => row.id.equals(entry.id)))
           .write(
         SyncQueueCompanion(
-          status: const Value(SyncQueueStatus.sent),
+          status: entry.status == SyncQueueStatus.sent
+              ? const Value(SyncQueueStatus.pendingSync)
+              : const Value.absent(),
           lastAttemptAt: Value(DateTime.now().toUtc()),
         ),
       );
     }
 
-    if (pending.isNotEmpty) {
-      print('[SyncQueueManager] Flush de ${pending.length} message(s).');
+    if (sentCount > 0) {
+      print('[SyncQueueManager] Flush de $sentCount message(s).');
     }
   }
 

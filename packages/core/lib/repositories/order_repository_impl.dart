@@ -954,13 +954,35 @@ class OrderRepositoryImpl implements OrderRepository {
       if (localItem == null) {
         await _db.into(_db.orderItems).insert(companion);
       } else {
+        // Règle « prix figés » : unitPrice/taxRate sont gelés après création.
+        // Le miroir ne réécrit que les champs mutables ; toute divergence de
+        // prix distante est journalisée sans être appliquée (piste d'audit).
+        final remoteUnitPrice = (raw['unitPrice'] as num).toDouble();
+        final remoteTaxRate = (raw['taxRate'] as num).toDouble();
+        if (remoteUnitPrice != localItem.unitPrice ||
+            remoteTaxRate != localItem.taxRate) {
+          await _audit.logActionTyped(
+            userId: 'pos-server',
+            action: AuditAction.priceChange,
+            targetType: AuditTargetType.orderItem,
+            targetId: itemId,
+            details: {
+              'source': 'mirror_sync',
+              'local': {
+                'unitPrice': localItem.unitPrice,
+                'taxRate': localItem.taxRate,
+              },
+              'remoteIgnored': {
+                'unitPrice': remoteUnitPrice,
+                'taxRate': remoteTaxRate,
+              },
+            },
+          );
+        }
         await (_db.update(_db.orderItems)..where((i) => i.id.equals(itemId)))
             .write(
           OrderItemsCompanion(
-            productId: Value(raw['productId'] as String),
             quantity: Value((raw['quantity'] as num).toDouble()),
-            unitPrice: Value((raw['unitPrice'] as num).toDouble()),
-            taxRate: Value((raw['taxRate'] as num).toDouble()),
             courseNumber: Value(raw['courseNumber'] as int? ?? 1),
             isFired: Value(raw['isFired'] as bool? ?? false),
             status: Value(raw['status'] as String? ?? 'ACTIVE'),

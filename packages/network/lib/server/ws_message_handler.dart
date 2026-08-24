@@ -77,8 +77,20 @@ class WsMessageHandler {
       // Silent ACK (idempotent reply).
       return _successAck(envelope, data: {'duplicate': true});
     }
-    _seenMessageIds[envelope.messageId] = true;
+    final response = await _dispatch(envelope);
 
+    // [BAS-N06-v2] Marqué « vu » uniquement APRÈS un traitement réussi :
+    // un échec transitoire (session caisse fermée, verrou DB…) ne doit pas
+    // consommer le messageId — le mobile doit pouvoir rejouer son envoi.
+    if (response.action == WsAction.ack &&
+        response.payload['status'] == AckStatus.success) {
+      _seenMessageIds[envelope.messageId] = true;
+    }
+    return response;
+  }
+
+  /// Exécute le traitement réel après la vérification de déduplication.
+  Future<EventEnvelope> _dispatch(EventEnvelope envelope) async {
     // [HAUTE-A04] RBAC check.
     if (_rbac.isKnownCommand(envelope.action) &&
         !_rbac.isAllowed(envelope.action, envelope.userRole)) {

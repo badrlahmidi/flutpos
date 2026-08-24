@@ -106,5 +106,36 @@ void main() {
       expect(ack.action, WsAction.error);
       expect(ack.payload['code'], ErrorCode.forbidden);
     });
+
+    test('[BAS-N06-v2] échec transitoire : le messageId reste rejouable',
+        () async {
+      final envelope = _incoming(
+        WsAction.createOrder,
+        payload: {'tableId': 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d'},
+      );
+
+      final first = await handler.handle(envelope);
+      expect(first.payload['status'], AckStatus.error);
+
+      // Rejeu du même messageId après réparation : doit être re-traité
+      // (ERROR à nouveau), pas avalé par la déduplication.
+      final retry = await handler.handle(envelope);
+      expect(retry.action, WsAction.error);
+      expect(retry.payload['status'], AckStatus.error);
+    });
+
+    test('[BAS-N06-v2] succès : le messageId est consommé (duplicate)',
+        () async {
+      final envelope = _incoming(WsAction.voidItem);
+
+      final first = await handler.handle(envelope);
+      expect(first.payload['status'], AckStatus.success);
+      expect(first.payload['duplicate'], isNull);
+
+      final duplicate = await handler.handle(envelope);
+      expect(duplicate.action, WsAction.ack);
+      expect(duplicate.payload['status'], AckStatus.success);
+      expect(duplicate.payload['duplicate'], true);
+    });
   });
 }

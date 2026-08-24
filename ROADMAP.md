@@ -43,6 +43,20 @@
 | 1.5.6 | Fix build Android : `res/xml/network_security_config.xml` recréé (contenu était coincé dans le fichier parasite `apps/wait`, supprimé) + permission `INTERNET` ajoutée | ✅ Fait | Cleartext LAN assumé jusqu'à migration wss:// (P7) |
 
 
+### P1.6 — FIABILITÉ SYNC & INTÉGRITÉ DONNÉES (Complétée ✅ 24 août 2026)
+
+> Dette issue de l'audit : reprise offline et atomicité des opérations salle.
+
+| # | Tâche | Statut | Notes |
+|---|-------|--------|-------|
+| 1.6.1 | Dédup messageId marquée APRÈS traitement réussi (`handle` → `_dispatch`) | ✅ Fait | Un échec transitoire ne consomme plus le messageId — le mobile peut rejouer |
+| 1.6.2 | Queue offline : entrées restent `PENDING_SYNC` jusqu'à l'ACK ; `flush()` re-envoie aussi les `SENT` orphelines héritées (normalisées) | ✅ Fait | Plus aucun message perdu entre envoi et acquittement |
+| 1.6.3 | Transactions Drift sur `splitOrderItemToSubOrder` / `transferTableOrder` / `mergeTableOrders` | ✅ Fait | Plus de table fantôme OCCUPIED ni fusion/scission partielle en cas de crash |
+| 1.6.4 | Gel des prix en mirror-sync : unitPrice/taxRate jamais réécrits après création + audit `PRICE_CHANGE` sur divergence | ✅ Fait | `mirrorOrderSnapshot` — piste d'audit horodatée |
+
+**Tests** : core 95/95 · network 32/32 (5 nouveaux tests queue, 2 tests dédup, 1 test gel des prix).
+
+
 ### Fichiers nettoyés (14 supprimés)
 
 - `audit_analysis.md`, `gemini_pos_brainstorming.md` (69KB de brainstorming obsolète)

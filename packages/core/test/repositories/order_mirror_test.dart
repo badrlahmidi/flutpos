@@ -161,4 +161,108 @@ void main() {
 
     expect(localSession.id, isNotEmpty);
   });
+
+  test('mirrorOrderSnapshot fige les prix : divergence distante ignorée + audit',
+      () async {
+    final mobileDb = AppDatabase(NativeDatabase.memory());
+    addTearDown(mobileDb.close);
+    final audit = AuditRepositoryImpl(mobileDb);
+    final mobileOrders = OrderRepositoryImpl(mobileDb, audit);
+    await mobileDb.into(mobileDb.users).insert(
+          UsersCompanion.insert(
+            id: Value(userId),
+            name: 'Serveur',
+            pinHash: 'hash',
+            role: 'WAITER',
+          ),
+        );
+    await mobileDb.into(mobileDb.zones).insert(
+          ZonesCompanion.insert(id: const Value('zone-1'), name: 'Salle'),
+        );
+    await mobileDb.into(mobileDb.restaurantTables).insert(
+          RestaurantTablesCompanion.insert(
+            id: Value(tableId),
+            zoneId: 'zone-1',
+            name: 'T1',
+            capacity: 4,
+          ),
+        );
+    await mobileDb.into(mobileDb.categories).insert(
+          CategoriesCompanion.insert(id: const Value('cat'), name: 'Plats'),
+        );
+    await mobileDb.into(mobileDb.products).insert(
+          ProductsCompanion.insert(
+            id: const Value('prod-1'),
+            categoryId: 'cat',
+            name: 'Couscous',
+            priceDineIn: 95,
+          ),
+        );
+    final session = await mobileOrders.ensureOpenSession(cashierId: userId);
+    final localOrder = await mobileOrders.openTableOrder(
+      sessionId: session.id,
+      waiterId: userId,
+      tableId: tableId,
+      orderId: 'order-pc-002',
+    );
+    await mobileOrders.addOrderItem(
+      orderId: localOrder.id,
+      product: product,
+      orderType: OrderType.dineIn,
+      courseNumber: 1,
+      orderItemId: 'item-1',
+    );
+
+    Map<String, dynamic> snapshotWith({
+      required double unitPrice,
+      required double taxRate,
+    }) => {
+          'order': {
+            'id': 'order-pc-002',
+            'waiterId': userId,
+            'tableId': tableId,
+            'orderType': 'DINE_IN',
+            'status': 'OPEN',
+            'guestCount': 2,
+            'createdAt': DateTime.now().toUtc().toIso8601String(),
+          },
+          'items': [
+            {
+              'id': 'item-1',
+              'productId': 'prod-1',
+              'quantity': 1,
+              'unitPrice': unitPrice,
+              'taxRate': taxRate,
+              'courseNumber': 1,
+              'isFired': false,
+              'status': 'ACTIVE',
+              'customNotes': null,
+              'createdAt': DateTime.now().toUtc().toIso8601String(),
+            },
+          ],
+        };
+
+    // Premier miroir cohérent (95 / TVA 20) : aucune divergence.
+    var mirrored = await mobileOrders.mirrorOrderSnapshot(
+      localSessionId: session.id,
+      snapshot: snapshotWith(unitPrice: 95, taxRate: 20),
+    );
+    expect(mirrored!.items.single.orderItem.unitPrice, 95);
+    expect(mirrored.items.single.orderItem.taxRate, 20);
+
+    // La caisse « réécrit » prix et TVA : le gel doit tout ignorer.
+    mirrored = await mobileOrders.mirrorOrderSnapshot(
+      localSessionId: session.id,
+      snapshot: snapshotWith(unitPrice: 120, taxRate: 25),
+    );
+    expect(mirrored!.items.single.orderItem.unitPrice, 95);
+    expect(mirrored.items.single.orderItem.taxRate, 20);
+
+    // Piste d'audit de la tentative de réécriture.
+    final entries = await audit.getEntriesForTarget(
+      targetType: AuditTargetType.orderItem.dbValue,
+      targetId: 'item-1',
+    );
+    expect(entries.map((e) => e.action), contains('PRICE_CHANGE'));
+  });
 }

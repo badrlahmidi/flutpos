@@ -30,15 +30,19 @@ class TableOperationsUseCase {
       throw StateError('La table cible est déjà occupée');
     }
 
-    await (_db.update(_db.orders)..where((o) => o.id.equals(orderId))).write(
-          OrdersCompanion(
-            tableId: Value(targetTableId),
-            updatedAt: Value(DateTime.now().toUtc()),
-          ),
-        );
+    // Transaction : commande + 2 tables doivent basculer ensemble,
+    // sinon un crash laisse une table fantôme OCCUPIED.
+    await _db.transaction(() async {
+      await (_db.update(_db.orders)..where((o) => o.id.equals(orderId))).write(
+            OrdersCompanion(
+              tableId: Value(targetTableId),
+              updatedAt: Value(DateTime.now().toUtc()),
+            ),
+          );
 
-    await _releaseTableIfNoOpenOrders(fromTableId);
-    await _setTableStatus(targetTableId, 'OCCUPIED');
+      await _releaseTableIfNoOpenOrders(fromTableId);
+      await _setTableStatus(targetTableId, 'OCCUPIED');
+    });
 
     return (_db.select(_db.orders)..where((o) => o.id.equals(orderId))).getSingle();
   }
@@ -69,22 +73,28 @@ class TableOperationsUseCase {
       throw StateError('Ticket proforma non modifiable (encaissement en cours)');
     }
 
-    await (_db.update(_db.orderItems)..where((i) => i.orderId.equals(sourceOrderId)))
-        .write(OrderItemsCompanion(orderId: Value(targetOrderId)));
+    // Transaction : articles déplacés, source annulée et tables mises à
+    // jour doivent être atomiques (sinon fusion partielle en cas de crash).
+    await _db.transaction(() async {
+      await (_db.update(_db.orderItems)
+            ..where((i) => i.orderId.equals(sourceOrderId)))
+          .write(OrderItemsCompanion(orderId: Value(targetOrderId)));
 
-    await (_db.update(_db.orders)..where((o) => o.id.equals(sourceOrderId))).write(
-      OrdersCompanion(
-        status: const Value('CANCELLED'),
-        updatedAt: Value(DateTime.now().toUtc()),
-      ),
-    );
+      await (_db.update(_db.orders)..where((o) => o.id.equals(sourceOrderId)))
+          .write(
+        OrdersCompanion(
+          status: const Value('CANCELLED'),
+          updatedAt: Value(DateTime.now().toUtc()),
+        ),
+      );
 
-    if (source.tableId != null) {
-      await _releaseTableIfNoOpenOrders(source.tableId!);
-    }
-    if (target.tableId != null) {
-      await _setTableStatus(target.tableId!, 'OCCUPIED');
-    }
+      if (source.tableId != null) {
+        await _releaseTableIfNoOpenOrders(source.tableId!);
+      }
+      if (target.tableId != null) {
+        await _setTableStatus(target.tableId!, 'OCCUPIED');
+      }
+    });
 
     return (_db.select(_db.orders)..where((o) => o.id.equals(targetOrderId))).getSingle();
   }
