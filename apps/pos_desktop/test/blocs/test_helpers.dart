@@ -9,6 +9,7 @@ final testUser = User(
   role: 'CASHIER',
   accessLevel: 0,
   isActive: true,
+  failedAttempts: 0,
   createdAt: DateTime(2026),
 );
 

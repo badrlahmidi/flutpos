@@ -22,8 +22,8 @@ dependencies:
   google_fonts: ^6.2.1
   path: ^1.9.0
   path_provider: ^2.1.5
-  sqlite3_flutter_libs: ^0.6.0+eol
   window_manager: ^0.4.3
+  flutter_secure_storage: ^9.2.2
   get_it: ^8.0.3
   unified_esc_pos_printer: ^3.2.0
   powersync_flutter_libs: ^0.5.0
@@ -45,3 +45,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc

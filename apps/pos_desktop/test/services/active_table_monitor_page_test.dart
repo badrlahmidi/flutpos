@@ -26,6 +26,7 @@ void main() {
       role: 'WAITER',
       accessLevel: 3,
       isActive: true,
+      failedAttempts: 0,
       createdAt: DateTime.now(),
     );
 

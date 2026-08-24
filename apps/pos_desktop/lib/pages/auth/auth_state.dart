@@ -108,3 +108,8 @@ final class AuthLocked extends AuthState {
   @override
   List<Object?> get props => [message];
 }
+
+/// Verrouillage automatique après inactivité (security fix [HAUTE-F02]).
+final class AuthAutoLockedState extends AuthState {
+  const AuthAutoLockedState();
+}

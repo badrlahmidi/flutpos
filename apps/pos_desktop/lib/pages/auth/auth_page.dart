@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -97,18 +98,26 @@ class _AuthViewState extends State<_AuthView> {
     }
   }
 
+  /// Security fix [BAS-F04] — Validation format code-barres PIN.
+  /// N'accepte que les formats `^[0-9]{4,8}$` (chiffres uniquement, longueur
+  /// entre 4 et 8). Rejette silencieusement les formats invalides.
+  static final _pinBarcodeRegex = RegExp(r'^[0-9]{4,8}$');
+
   void _processBarcode(String barcode) {
-    // Si le code commence par user:, on extrait le PIN
-    // Sinon, on suppose que c'est le PIN directement
+    // Si le code commence par user:, on extrait le PIN.
+    // Sinon, on suppose que c'est le PIN directement.
     final pin = barcode.startsWith('user:') ? barcode.substring(5) : barcode;
-    
-    // Nettoyer l'état précédent et soumettre le PIN complet
+
+    // Valider le format — rejeter silencieusement les formats invalides.
+    if (!_pinBarcodeRegex.hasMatch(pin)) {
+      return;
+    }
+
+    // Nettoyer l'état précédent et soumettre le PIN complet.
     final bloc = context.read<AuthBloc>();
     bloc.add(const AuthPinClearPressed());
-    
-    // Pour que le login se lance, on doit ajouter les chiffres un par un, 
-    // ou ajouter une méthode spéciale dans l'AuthBloc.
-    // Simuler la frappe des chiffres :
+
+    // Simuler la frappe des chiffres pour déclencher le login automatique.
     for (var i = 0; i < pin.length; i++) {
       bloc.add(AuthPinDigitPressed(pin[i]));
     }
@@ -367,7 +376,7 @@ class _AuthViewState extends State<_AuthView> {
                               ),
                             ],
                             const SizedBox(height: AppSpacing.l),
-                            Text(
+                            if (kDebugMode) Text(
                               'Démo : PIN serveur 9012 · admin 1234',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: scheme.onSurfaceVariant.withValues(alpha: 0.5),

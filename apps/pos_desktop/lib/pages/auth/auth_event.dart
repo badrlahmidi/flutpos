@@ -50,3 +50,8 @@ final class AuthClockInRequested extends AuthEvent {
 final class AuthClockOutRequested extends AuthEvent {
   const AuthClockOutRequested();
 }
+
+/// Verrouillage automatique après inactivité (security fix [HAUTE-F02]).
+final class AuthAutoLocked extends AuthEvent {
+  const AuthAutoLocked();
+}
