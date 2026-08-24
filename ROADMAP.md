@@ -1,33 +1,47 @@
 # ROADMAP UNIQUE — Ritagestion POS
 
-> **Dernière mise à jour : 27 juin 2026** · Branche active : `feat/sprints-4-5-livraison`
+> **Dernière mise à jour : 24 août 2026** · Branche active : `main`
 
 ---
 
-## État actuel — Audit du 27 juin 2026
+## État actuel — Audit du 24 août 2026
 
-### Note globale : **8,2 / 10** (recalculée post-stabilisation)
+### Note globale : **8,4 / 10**
 
 | Dimension | Note | Détail |
 |-----------|------|--------|
-| Architecture & Clean Arch | **8,5** | 14 repositories, 8 use cases, 8 BLoCs, barrel exports propres |
-| Base de données (Drift) | **9,0** | 26 tables, migrations v7+, seed data, schéma solide |
+| Architecture & Clean Arch | **8,5** | 16 repositories, 8 use cases, 9 BLoCs, barrel exports propres |
+| Base de données (Drift) | **9,0** | 29 tables (v11 : + Customers, DevicePairings, ActiveSessions), seed data |
 | Caisse Desktop (POS) | **8,5** | UI 3 colonnes, vouchers, courses, recherche, impression |
-| Réseau LAN (mobile↔PC) | **8,0** | Shelf + mDNS + heartbeat, CREATE/ADD/FIRE_COURSE, sync miroir |
-| Backoffice & CRUD | **5,0** | Shell sidebar existe, mais CRUD catégories/produits/modifiers incomplet |
-| Tests | **9,5** | core 93✅, network 18✅, desktop 18✅, mobile 1✅ — 100% verts |
+| Réseau LAN (mobile↔PC) | **8,5** | Bind LAN réparé, pairing WS complet, RBAC+dedup+rate-limit actifs, sync miroir |
+| Backoffice & CRUD | **7,0** | P2.1–P2.3 CRUD catégories/produits/modifiers **fait** ; reste P2.4 extras + P2.5 paiements/taxes |
+| Tests | **9,5** | core 94✅, network 25✅, desktop 21✅ — 100% verts |
 | Reporting & Analytics | **7,5** | Dashboard KPI, 4 rapports Drift, exports CSV/PDF, period picker |
 | Cloud / SaaS | **5,0** | PowerSync schema prêt, déploiement Supabase prod non fait |
 | Prod-readiness Maroc | **7,5** | MAD, ICE, TVA multi-taux, Glovo, tickets AR raster |
 
-### Tests — 27 juin 2026
+### Tests — 24 août 2026
 
 | Package | Résultat |
 |---------|----------|
-| `packages/core` | **93/93** ✅ |
-| `packages/network` | **18/18** ✅ |
-| `apps/pos_desktop` | **18/18** ✅ |
-| **Total passants** | **130/130** ✅ (100% verts) |
+| `packages/core` | **94/94** ✅ |
+| `packages/network` | **25/25** ✅ (+4 tests pairing/RBAC/validation) |
+| `apps/pos_desktop` | **21/21** ✅ |
+| **Total passants** | **140/140** ✅ (100% verts) |
+
+### P1.5 — STABILISATION SÉCURITÉ RÉSEAU (Complétée ✅ 24 août 2026)
+
+> Audit complet monorepo puis réparation du WIP sécurité resté à moitié câblé.
+
+| # | Tâche | Statut | Notes |
+|---|-------|--------|-------|
+| 1.5.1 | Réparer suite network (7 tests rouges du WIP RBAC/dedup) | ✅ Fait | Nouveau contrat : enveloppe `ERROR` dédiée + `userRole` requis sur commandes métier |
+| 1.5.2 | Fix crash `AppLogger` (`hierarchicalLoggingEnabled`) | ✅ Fait | `app_logger.dart` — plantait le serveur au 1er warning |
+| 1.5.3 | **Bind LAN réparé** : `loopbackIPv4` → `anyIPv4` (param `bindAddress`) | ✅ Fait | Les téléphones peuvent enfin se connecter à la caisse |
+| 1.5.4 | Handler `PAIRING_REQUEST` implémenté (dead-end → flux complet) | ✅ Fait | Token 5 min validé via `DevicePairingRepository`, cache rechargé au restart |
+| 1.5.5 | Client mobile : rôles estampolés (`defaultUserRole=WAITER`), `sessionToken`, `pairWithServer()`, ERROR = réponse terminale de la queue | ✅ Fait | `waiter_network_client.dart` |
+| 1.5.6 | Fix build Android : `res/xml/network_security_config.xml` recréé (contenu était coincé dans le fichier parasite `apps/wait`, supprimé) + permission `INTERNET` ajoutée | ✅ Fait | Cleartext LAN assumé jusqu'à migration wss:// (P7) |
+
 
 ### Fichiers nettoyés (14 supprimés)
 
