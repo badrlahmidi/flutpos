@@ -12,6 +12,7 @@ import '../helpers/lan_sync_seed.dart';
 
 const _ackSuccess = 'SUCCESS';
 const _deviceId = 'waiter-e2e-test';
+const _userRole = UserRole.waiter;
 
 void main() {
   group('P2-3 — sync mobile ↔ PC', () {
@@ -85,6 +86,7 @@ void main() {
         EventEnvelope.create(
           action: WsAction.createOrder,
           deviceId: _deviceId,
+          userRole: _userRole,
           payload: {
             'tableId': LanSyncSeed.tableId,
             'guestCount': 2,
@@ -100,6 +102,7 @@ void main() {
         EventEnvelope.create(
           action: WsAction.getOpenOrder,
           deviceId: _deviceId,
+          userRole: _userRole,
           payload: {'tableId': LanSyncSeed.tableId},
         ),
       );
@@ -113,6 +116,7 @@ void main() {
         EventEnvelope.create(
           action: WsAction.addItems,
           deviceId: _deviceId,
+          userRole: _userRole,
           payload: {
             'orderId': LanSyncSeed.orderId,
             'productId': LanSyncSeed.productId,
@@ -130,6 +134,7 @@ void main() {
         EventEnvelope.create(
           action: WsAction.getOpenOrder,
           deviceId: _deviceId,
+          userRole: _userRole,
           payload: {'tableId': LanSyncSeed.tableId},
         ),
       );
@@ -156,6 +161,7 @@ void main() {
         EventEnvelope.create(
           action: WsAction.createOrder,
           deviceId: _deviceId,
+          userRole: _userRole,
           payload: {
             'tableId': LanSyncSeed.tableId,
             'orderId': LanSyncSeed.orderId,
@@ -168,6 +174,7 @@ void main() {
         EventEnvelope.create(
           action: WsAction.createOrder,
           deviceId: _deviceId,
+          userRole: _userRole,
           payload: {'tableId': LanSyncSeed.tableId},
         ),
       );
@@ -208,6 +215,7 @@ void main() {
         EventEnvelope.create(
           action: WsAction.createOrder,
           deviceId: _deviceId,
+          userRole: _userRole,
           payload: {'tableId': LanSyncSeed.tableId},
         ),
       );

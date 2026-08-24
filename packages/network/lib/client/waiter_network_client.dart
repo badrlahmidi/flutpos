@@ -19,12 +19,21 @@ class WaiterNetworkClient implements NetworkSender {
   WaiterNetworkClient({
     required AppDatabase database,
     required this.deviceId,
+    this.defaultUserRole = UserRole.waiter,
     SyncQueueManager? syncQueueManager,
     NsDsNetwork? nsDsNetwork,
   })  : _syncQueueManager = syncQueueManager ?? SyncQueueManager(database),
         _nsDsNetwork = nsDsNetwork ?? NsDsNetwork.instance;
 
   final String deviceId;
+
+  /// Rôle RBAC estampé sur chaque commande tant qu'aucune session
+  /// authentifiée n'existe (security fix [HAUTE-A04]).
+  final String defaultUserRole;
+
+  /// Token de session authentifiée (optionnel — défini après login PIN).
+  String? sessionToken;
+
   final SyncQueueManager _syncQueueManager;
   final NsDsNetwork _nsDsNetwork;
 
@@ -167,7 +176,10 @@ class WaiterNetworkClient implements NetworkSender {
     final completer = Completer<EventEnvelope>();
     late StreamSubscription<EventEnvelope> subscription;
     subscription = messages.listen((message) {
-      if (message.action != WsAction.ack) {
+      final isResponse = message.action == WsAction.ack ||
+          message.action == WsAction.error ||
+          message.action == WsAction.pairingResponse;
+      if (!isResponse) {
         return;
       }
       if (message.payload['originalMessageId'] == envelope.messageId) {
@@ -211,12 +223,46 @@ class WaiterNetworkClient implements NetworkSender {
       throw StateError('WebSocket non connecté — impossible d\'envoyer directement.');
     }
     try {
-      channel.sink.add(EventSerializer.encode(envelope));
+      channel.sink.add(EventSerializer.encode(_stampCredentials(envelope)));
     } catch (error) {
       print('[WaiterNetworkClient] Envoi direct échoué: $error');
       await _syncQueueManager.enqueue(envelope);
       rethrow;
     }
+  }
+
+  /// Estampole rôle/token RBAC sur les commandes métier sortantes.
+  EventEnvelope _stampCredentials(EventEnvelope envelope) {
+    return envelope.copyWith(
+      userRole: envelope.userRole ?? defaultUserRole,
+      sessionToken: envelope.sessionToken ?? sessionToken,
+    );
+  }
+
+  /// Demande de couplage du terminal (security fix [HAUTE-N02]).
+  ///
+  /// Le token est généré côté caisse (QR code) et validé par un manager.
+  Future<EventEnvelope> pairWithServer({
+    required String pairingToken,
+    String? deviceName,
+  }) async {
+    final response = await sendAndAwaitAck(
+      EventEnvelope.create(
+        action: WsAction.pairingRequest,
+        deviceId: deviceId,
+        payload: {
+          'pairingToken': pairingToken,
+          if (deviceName != null) 'deviceName': deviceName,
+        },
+      ),
+    );
+    if (response.action == WsAction.pairingResponse &&
+        response.payload['status'] == 'SUCCESS') {
+      await _syncQueueManager.onAck(
+        response.payload['originalMessageId'] as String? ?? '',
+      );
+    }
+    return response;
   }
 
   /// Ferme proprement la connexion et annule la reconnexion auto.
@@ -251,9 +297,11 @@ class WaiterNetworkClient implements NetworkSender {
       return;
     }
 
-    if (envelope.action == WsAction.ack) {
+    if (envelope.action == WsAction.ack || envelope.action == WsAction.error) {
       final originalId = envelope.payload['originalMessageId'] as String?;
       if (originalId != null) {
+        // Réponse terminale du serveur (succès OU refus définitif) —
+        // on retire la ligne de la queue pour éviter les messages bloqués.
         unawaited(_syncQueueManager.onAck(originalId));
       }
     }

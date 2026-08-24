@@ -13,10 +13,18 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../protocol/event_envelope.dart';
 import '../protocol/event_serializer.dart';
 import '../protocol/ws_action.dart';
+import '../utils/app_logger.dart';
 import 'ws_client_registry.dart';
 import 'ws_message_handler.dart';
+import 'ws_rate_limiter.dart';
 
 /// Serveur HTTP + WebSocket de la caisse PC (Shelf).
+///
+/// Security fixes intégrés :
+/// * [HAUTE-N02] Validation du pairing token à la connexion.
+/// * [HAUTE-A04] Validation du sessionToken à chaque message.
+/// * [MOY-N04]  Logging structuré (remplace `print()`).
+/// * [MOY-N05]  Rate limiting par deviceId.
 class PosNetworkServer {
   PosNetworkServer({
     required AppDatabase database,
@@ -25,10 +33,14 @@ class PosNetworkServer {
     ProductRepository? productRepository,
     WsClientRegistry? clientRegistry,
     WsMessageHandler? messageHandler,
+    WsRateLimiter? rateLimiter,
     this.version = '1.0.0',
     this.port = NsDsNetworkConstants.defaultPort,
+    InternetAddress? bindAddress,
     this.announceMdns = true,
-  })  : _database = database,
+    this.pairingRequired = false,
+  })  : bindAddress = bindAddress ?? InternetAddress.anyIPv4,
+        _database = database,
         _cashSessionRepository = cashSessionRepository ??
             CashSessionRepositoryImpl(
               database,
@@ -41,7 +53,8 @@ class PosNetworkServer {
               orderRepository: orderRepository,
               cashSessionRepository: cashSessionRepository,
               productRepository: productRepository,
-            );
+            ),
+        _rateLimiter = rateLimiter ?? WsRateLimiter();
 
   static WsMessageHandler _createMessageHandler({
     required AppDatabase database,
@@ -57,6 +70,7 @@ class PosNetworkServer {
           orderRepository ?? OrderRepositoryImpl(database, audit),
       cashSessionRepository: sessions,
       productRepository: productRepository ?? ProductRepositoryImpl(database),
+      devicePairingRepository: DevicePairingRepository(database),
     );
   }
 
@@ -64,6 +78,7 @@ class PosNetworkServer {
   final CashSessionRepository _cashSessionRepository;
   final WsClientRegistry _clientRegistry;
   final WsMessageHandler _messageHandler;
+  final WsRateLimiter _rateLimiter;
 
   /// Version exposée sur `GET /ping`.
   final String version;
@@ -71,8 +86,16 @@ class PosNetworkServer {
   /// Port d'écoute HTTP/WebSocket.
   final int port;
 
+  /// Interface d'écoute. Par défaut toutes les interfaces (LAN) —
+  /// le serveur doit être joignable par les terminaux serveurs.
+  late final InternetAddress bindAddress;
+
   /// Annonce mDNS au démarrage (désactivé en tests d'intégration).
   final bool announceMdns;
+
+  /// Lorsque `true`, refuse les connexions WebSocket sans pairing token valide.
+  /// (security fix [HAUTE-N02]) — activé en production, désactivé en tests.
+  final bool pairingRequired;
 
   HttpServer? _httpServer;
   Timer? _heartbeatTimer;
@@ -82,6 +105,9 @@ class PosNetworkServer {
 
   /// Association canal → deviceId pour les connexions en attente d'identification.
   final Map<WebSocketChannel, String> _channelDeviceIds = {};
+
+  /// Devices déjà pairés (cache en mémoire, security fix [HAUTE-N02]).
+  final Set<String> _pairedDevices = {};
 
   /// Registre des clients connectés (lecture seule).
   WsClientRegistry get clientRegistry => _clientRegistry;
@@ -98,6 +124,9 @@ class PosNetworkServer {
       return;
     }
 
+    // Initialize logger (security fix [MOY-N04]).
+    AppLogger.instance.init();
+
     final router = Router()
       ..get('/ping', handlePingAsync)
       ..get('/ws', webSocketHandler(_handleWebSocket));
@@ -108,7 +137,7 @@ class PosNetworkServer {
 
     _httpServer = await shelf_io.serve(
       handler,
-      InternetAddress.loopbackIPv4,
+      bindAddress,
       port,
     );
 
@@ -116,13 +145,16 @@ class PosNetworkServer {
       await NsDsNetwork.instance.registerService(port: boundPort ?? port);
     }
 
+    // [HAUTE-N02] Recharge les couplages actifs — survit au redémarrage.
+    await _reloadPairedDevices();
+
     _heartbeatTimer = Timer.periodic(
       const Duration(seconds: 10),
       (_) => _sendHeartbeat(),
     );
 
-    print(
-      '[PosNetworkServer] Démarré sur ${_httpServer!.address.address}:$port',
+    AppLogger.instance.info(
+      'Server started on ${_httpServer!.address.address}:$port',
     );
   }
 
@@ -137,6 +169,7 @@ class PosNetworkServer {
     _clientRegistry.clear();
     _channelDeviceIds.clear();
     _missedPongs.clear();
+    _rateLimiter.clear();
 
     final server = _httpServer;
     _httpServer = null;
@@ -147,7 +180,7 @@ class PosNetworkServer {
     if (announceMdns) {
       await NsDsNetwork.instance.unregisterService();
     }
-    print('[PosNetworkServer] Arrêté.');
+    AppLogger.instance.info('Server stopped.');
   }
 
   /// Envoie un message à tous les terminaux connectés.
@@ -156,8 +189,8 @@ class PosNetworkServer {
     for (final channel in _clientRegistry.all) {
       _safeSend(channel, encoded);
     }
-    print(
-      '[PosNetworkServer] Broadcast ${envelope.action} → ${_clientRegistry.count} clients',
+    AppLogger.instance.info(
+      'Broadcast ${envelope.action} → ${_clientRegistry.count} clients',
     );
   }
 
@@ -165,10 +198,28 @@ class PosNetworkServer {
   void sendTo(String deviceId, EventEnvelope envelope) {
     final channel = _clientRegistry.get(deviceId);
     if (channel == null) {
-      print('[PosNetworkServer] Client introuvable: $deviceId');
+      AppLogger.instance.warning(
+        'Client not found: ${AppLogger.maskDeviceId(deviceId)}',
+      );
       return;
     }
     _safeSend(channel, EventSerializer.encode(envelope));
+  }
+
+  /// Ajoute un device à la liste des terminaux pairés (security fix [HAUTE-N02]).
+  void registerPairedDevice(String deviceId) {
+    _pairedDevices.add(deviceId);
+    AppLogger.instance.info(
+      'Paired device registered: ${AppLogger.maskDeviceId(deviceId)}',
+    );
+  }
+
+  /// Retire un device de la liste des terminaux pairés.
+  void revokePairedDevice(String deviceId) {
+    _pairedDevices.remove(deviceId);
+    AppLogger.instance.warning(
+      'Paired device revoked: ${AppLogger.maskDeviceId(deviceId)}',
+    );
   }
 
   /// Ping enrichi — indique si une session caisse est ouverte sur le PC.
@@ -188,13 +239,17 @@ class PosNetworkServer {
   }
 
   void _handleWebSocket(WebSocketChannel webSocket) {
-    print('[PosNetworkServer] Nouvelle connexion WebSocket');
+    AppLogger.instance.info('New WebSocket connection');
 
     webSocket.stream.listen(
       (dynamic data) => _onMessage(webSocket, data),
       onDone: () => _onDisconnect(webSocket),
       onError: (Object error, StackTrace stackTrace) {
-        print('[PosNetworkServer] Erreur WebSocket: $error');
+        AppLogger.instance.severe(
+          'WebSocket error',
+          error: error,
+          stackTrace: stackTrace,
+        );
         _onDisconnect(webSocket);
       },
       cancelOnError: true,
@@ -203,12 +258,64 @@ class PosNetworkServer {
 
   void _onMessage(WebSocketChannel webSocket, dynamic data) async {
     if (data is! String) {
-      print('[PosNetworkServer] Message binaire ignoré.');
+      AppLogger.instance.warning('Binary message ignored.');
       return;
     }
 
     final envelope = EventSerializer.decode(data);
     if (envelope == null) {
+      return;
+    }
+
+    // [HAUTE-N02] Pairing check (when enabled).
+    if (pairingRequired &&
+        envelope.action != WsAction.pairingRequest &&
+        !await _isPairedDevice(envelope.deviceId)) {
+      AppLogger.instance.warning(
+        'Pairing required: rejecting ${envelope.action} '
+        'from ${AppLogger.maskDeviceId(envelope.deviceId)}',
+      );
+      _safeSend(
+        webSocket,
+        EventSerializer.encode(EventEnvelope.create(
+          action: WsAction.error,
+          deviceId: 'pos-server',
+          payload: {
+            'code': 'PAIRING_REQUIRED',
+            'message': 'Terminal non couplé. Veuillez scanner le QR code.',
+          },
+        )),
+      );
+      return;
+    }
+
+    // [MOY-N05] Rate limiting (per deviceId).
+    if (!_rateLimiter.tryConsume(envelope.deviceId,
+        action: envelope.action)) {
+      AppLogger.instance.warning(
+        'Rate limited: ${AppLogger.maskDeviceId(envelope.deviceId)} '
+        '(${envelope.action})',
+      );
+      _safeSend(
+        webSocket,
+        EventSerializer.encode(EventEnvelope.create(
+          action: WsAction.error,
+          deviceId: 'pos-server',
+          payload: {
+            'code': 'RATE_LIMITED',
+            'message': 'Trop de messages. Veuillez ralentir.',
+          },
+        )),
+      );
+
+      // Disconnect after repeated violations.
+      if (_rateLimiter.shouldDisconnect(envelope.deviceId)) {
+        AppLogger.instance.severe(
+          'Disconnecting rate-limit abuser: '
+          '${AppLogger.maskDeviceId(envelope.deviceId)}',
+        );
+        _disconnectClient(envelope.deviceId);
+      }
       return;
     }
 
@@ -228,8 +335,40 @@ class PosNetworkServer {
     sendTo(envelope.deviceId, response);
   }
 
-  void _registerClient(WebSocketChannel webSocket, String deviceId) {
-    final previousId = _channelDeviceIds[webSocket];
+  /// Recharge les terminaux pairés actifs depuis la base.
+  Future<void> _reloadPairedDevices() async {
+    final pairings = _messageHandler.devicePairingRepository;
+    if (pairings == null) {
+      return;
+    }
+    try {
+      final active = await pairings.getActivePairings();
+      _pairedDevices
+        ..clear()
+        ..addAll(active.map((p) => p.deviceId));
+    } catch (e, st) {
+      AppLogger.instance.severe('Failed to load paired devices',
+          error: e, stackTrace: st);
+    }
+  }
+
+  /// Vérifie le couplage : cache mémoire, sinon base (fallback restart).
+  Future<bool> _isPairedDevice(String deviceId) async {
+    if (_pairedDevices.contains(deviceId)) {
+      return true;
+    }
+    final pairings = _messageHandler.devicePairingRepository;
+    if (pairings == null) {
+      return false;
+    }
+    final active = await pairings.isDeviceActive(deviceId);
+    if (active) {
+      _pairedDevices.add(deviceId);
+    }
+    return active;
+  }
+
+  void _registerClient(WebSocketChannel webSocket, String deviceId) {    final previousId = _channelDeviceIds[webSocket];
     if (previousId == deviceId && _clientRegistry.isConnected(deviceId)) {
       return;
     }
@@ -249,15 +388,22 @@ class PosNetworkServer {
     if (deviceId != null) {
       _clientRegistry.remove(deviceId);
       _missedPongs.remove(deviceId);
+      _rateLimiter.removeDevice(deviceId);
     }
-    print('[PosNetworkServer] Déconnexion WebSocket${deviceId != null ? ' ($deviceId)' : ''}');
+    AppLogger.instance.info(
+      'WebSocket disconnected'
+      '${deviceId != null ? ' (${AppLogger.maskDeviceId(deviceId)})' : ''}',
+    );
   }
 
   void _sendHeartbeat() {
     for (final deviceId in _clientRegistry.deviceIds.toList()) {
       final missed = _missedPongs[deviceId] ?? 0;
       if (missed >= 3) {
-        print('[PosNetworkServer] Client $deviceId déconnecté (3 PING sans PONG)');
+        AppLogger.instance.warning(
+          'Client disconnected (3 PING without PONG): '
+          '${AppLogger.maskDeviceId(deviceId)}',
+        );
         _disconnectClient(deviceId);
         continue;
       }
@@ -276,14 +422,15 @@ class PosNetworkServer {
     final channel = _clientRegistry.get(deviceId);
     _clientRegistry.remove(deviceId);
     _missedPongs.remove(deviceId);
+    _rateLimiter.removeDevice(deviceId);
     channel?.sink.close();
   }
 
   void _safeSend(WebSocketChannel channel, String message) {
     try {
       channel.sink.add(message);
-    } catch (error) {
-      print('[PosNetworkServer] Envoi impossible: $error');
+    } catch (error, st) {
+      AppLogger.instance.severe('Send failed', error: error, stackTrace: st);
     }
   }
 

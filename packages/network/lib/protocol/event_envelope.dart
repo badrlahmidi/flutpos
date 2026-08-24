@@ -11,6 +11,9 @@ class EventEnvelope {
     required String action,
     required String deviceId,
     Map<String, dynamic>? payload,
+    String? pairingToken,
+    String? sessionToken,
+    String? userRole,
   }) {
     return EventEnvelope(
       messageId: _uuid.v4(),
@@ -18,6 +21,9 @@ class EventEnvelope {
       timestamp: DateTime.now().toUtc().toIso8601String(),
       deviceId: deviceId,
       payload: payload ?? const {},
+      pairingToken: pairingToken,
+      sessionToken: sessionToken,
+      userRole: userRole,
     );
   }
 
@@ -34,6 +40,9 @@ class EventEnvelope {
           : rawPayload is Map
               ? Map<String, dynamic>.from(rawPayload)
               : const {},
+      pairingToken: json['pairingToken'] as String?,
+      sessionToken: json['sessionToken'] as String?,
+      userRole: json['userRole'] as String?,
     );
   }
 
@@ -43,6 +52,9 @@ class EventEnvelope {
     required this.timestamp,
     required this.deviceId,
     required this.payload,
+    this.pairingToken,
+    this.sessionToken,
+    this.userRole,
   });
 
   /// Identifiant unique du message (UUID v4) — idempotence réseau.
@@ -60,6 +72,15 @@ class EventEnvelope {
   /// Données métier spécifiques à l'action.
   final Map<String, dynamic> payload;
 
+  /// Token de couplage terminal (security fix [HAUTE-N02]).
+  final String? pairingToken;
+
+  /// Token de session authentifiée (security fix [HAUTE-A04]).
+  final String? sessionToken;
+
+  /// Rôle de l'utilisateur émetteur (RBAC, security fix [HAUTE-A04]).
+  final String? userRole;
+
   /// Sérialise l'enveloppe en [Map] JSON.
   Map<String, dynamic> toJson() => {
         'messageId': messageId,
@@ -67,6 +88,9 @@ class EventEnvelope {
         'timestamp': timestamp,
         'deviceId': deviceId,
         'payload': payload,
+        if (pairingToken != null) 'pairingToken': pairingToken,
+        if (sessionToken != null) 'sessionToken': sessionToken,
+        if (userRole != null) 'userRole': userRole,
       };
 
   EventEnvelope copyWith({
@@ -75,6 +99,9 @@ class EventEnvelope {
     String? timestamp,
     String? deviceId,
     Map<String, dynamic>? payload,
+    String? pairingToken,
+    String? sessionToken,
+    String? userRole,
   }) {
     return EventEnvelope(
       messageId: messageId ?? this.messageId,
@@ -82,6 +109,9 @@ class EventEnvelope {
       timestamp: timestamp ?? this.timestamp,
       deviceId: deviceId ?? this.deviceId,
       payload: payload ?? this.payload,
+      pairingToken: pairingToken ?? this.pairingToken,
+      sessionToken: sessionToken ?? this.sessionToken,
+      userRole: userRole ?? this.userRole,
     );
   }
 

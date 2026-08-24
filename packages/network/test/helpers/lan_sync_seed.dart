@@ -7,13 +7,13 @@ abstract final class LanSyncSeed {
   LanSyncSeed._();
 
   static const waiterId = kDefaultWaiterId;
-  static const cashierId = 'cashier-e2e-001';
-  static const tableId = 'table-e2e-001';
-  static const zoneId = 'zone-e2e-001';
-  static const categoryId = 'cat-e2e-001';
-  static const productId = 'prod-e2e-001';
-  static const orderId = 'order-e2e-001';
-  static const orderItemId = 'item-e2e-001';
+  static const cashierId = 'd1b6a3f2-7c4e-4a9b-9f0d-2e5c8a1b3c7e';
+  static const tableId = 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+  static const zoneId = 'b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e';
+  static const categoryId = 'c3d4e5f6-a7b8-4c9d-8e0f-2a3b4c5d6e7f';
+  static const productId = 'c9bf9e57-1685-4c89-bafb-ff5af830be8a';
+  static const orderId = 'd4e5f6a7-b8c9-4d0e-9f1a-3b4c5d6e7f80';
+  static const orderItemId = 'e5f6a7b8-c9d0-4e1f-a0b2-4c5d6e7f8091';
 
   static Future<void> seedPosCatalog(AppDatabase db) async {
     await db.into(db.users).insert(
