@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ritagestion POS — config sécurité réseau (security fix [MOY-M02]).
+
+  Le protocole LAN parle ws:// vers des IP dynamiques découvertes via mDNS :
+  impossible de whitelister statiquement les domaines. Cleartext autorisé
+  pour le trafic LAN ; migration wss:// planifiée (ROADMAP P7).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
