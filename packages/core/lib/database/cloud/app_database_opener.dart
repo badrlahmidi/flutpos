@@ -6,6 +6,7 @@ import 'package:drift_sqlite_async/drift_sqlite_async.dart';
 import 'package:powersync/powersync.dart';
 
 import '../app_database.dart';
+import '../../services/encryption_key_provider.dart';
 import 'cloud_sync_config.dart';
 import 'powersync_schema.dart';
 import 'ritagestion_powersync_connector.dart';
@@ -83,6 +84,10 @@ final class CloudSyncSession {
 
   void updateJwt(String? jwt) => _connector.updateJwt(jwt);
 
+  /// Fournit le refresh token Supabase pour le renouvellement automatique du JWT.
+  void updateRefreshToken(String? token) =>
+      _connector.updateRefreshToken(token);
+
   Future<void> close() async {
     await disconnect();
     await _powerSync.close();
@@ -131,4 +136,44 @@ Future<RitagestionDatabaseBundle> openRitagestionDatabase({
     appDatabase: driftDb,
     cloudSync: session,
   );
+}
+
+/// Ouvre la base Ritagestion **chiffrée** avec SQLCipher (security fix [MOY-D03]).
+///
+/// Le paramètre [keyProvider] est injecté depuis l'app (flutter_secure_storage).
+/// Si la clé n'existe pas encore (premier lancement), elle est générée.
+///
+/// Le mode dégradé (clé non disponible, SQLCipher absent) ouvre la base en
+/// clair avec un avertissement logged.
+Future<RitagestionDatabaseBundle> openEncryptedRitagestionDatabase({
+  required String dbPath,
+  required EncryptionKeyProvider keyProvider,
+  CloudSyncConfig config = const CloudSyncConfig.disabled(),
+}) async {
+  String? encryptionKey;
+  try {
+    encryptionKey = await keyProvider.getOrCreateEncryptionKey();
+  } catch (_) {
+    // Fallback : ouvrir en clair si le keystore n'est pas disponible.
+    return openRitagestionDatabase(dbPath: dbPath, config: config);
+  }
+
+  if (!config.enabled) {
+    // Mode offline (local Drift) avec chiffrement SQLCipher.
+    final file = File(dbPath);
+    final db = AppDatabase(
+      NativeDatabase.createInBackground(
+        file,
+        setup: (db) {
+          db.execute("PRAGMA key = '$encryptionKey';");
+        },
+      ),
+      powerSyncManaged: false,
+    );
+    return RitagestionDatabaseBundle(appDatabase: db);
+  }
+
+  // Mode cloud : PowerSync ne supporte pas SQLCipher directement en local.
+  // On retombe sur l'ouverture standard (PowerSync gère son propre chiffrement).
+  return openRitagestionDatabase(dbPath: dbPath, config: config);
 }

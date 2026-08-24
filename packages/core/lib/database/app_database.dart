@@ -2,10 +2,12 @@ import 'package:drift/drift.dart';
 
 import '../utils/uuid_generator.dart';
 
+import 'tables/active_sessions.dart';
 import 'tables/audit_trail.dart';
 import 'tables/cash_movements.dart';
 import 'tables/cash_sessions.dart';
 import 'tables/categories.dart';
+import 'tables/device_pairings.dart';
 import 'tables/discounts.dart';
 import 'tables/ingredients.dart';
 import 'tables/kitchen_notes.dart';
@@ -61,6 +63,8 @@ part 'app_database.g.dart';
     Vouchers,
     KitchenNotes,
     Customers,
+    DevicePairings,
+    ActiveSessions,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -70,7 +74,7 @@ class AppDatabase extends _$AppDatabase {
   final bool powerSyncManaged;
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -116,6 +120,30 @@ class AppDatabase extends _$AppDatabase {
           if (from < 9) {
             await m.createTable(customers);
             await m.addColumn(orders, orders.customerId);
+          }
+          // [CRIT-A02] Verrouillage persistant : colonnes failedAttempts + lockedUntil.
+          if (from < 10) {
+            await m.addColumn(users, users.failedAttempts);
+            await m.addColumn(users, users.lockedUntil);
+          }
+          // Security Phase 2 — migration v11.
+          if (from < 11) {
+            // [HAUTE-N02] Device pairing.
+            await m.createTable(devicePairings);
+            // [HAUTE-A04] Active sessions (sessionToken RBAC).
+            await m.createTable(activeSessions);
+            // [MOY-D04] Soft-delete (deletedAt) on sensitive tables.
+            await m.addColumn(customers, customers.deletedAt);
+            await m.addColumn(cashSessions, cashSessions.deletedAt);
+            await m.addColumn(orders, orders.deletedAt);
+            await m.addColumn(orderItems, orderItems.deletedAt);
+            await m.addColumn(payments, payments.deletedAt);
+            // [HAUTE-D02] Référentiel : nettoyer les customerId orphelins.
+            await customStatement('''
+              UPDATE orders SET customer_id = NULL
+              WHERE customer_id IS NOT NULL
+                AND customer_id NOT IN (SELECT id FROM customers)
+            ''');
           }
         },
       );

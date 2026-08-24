@@ -10,6 +10,14 @@ class Users extends Table {
       integer().withDefault(const Constant(0))();
   BoolColumn get isActive =>
       boolean().withDefault(const Constant(true))();
+
+  /// Nombre de tentatives PIN échouées consécutives (persisté, cf. CRIT-A02).
+  IntColumn get failedAttempts =>
+      integer().withDefault(const Constant(0))();
+
+  /// Date/heure jusqu'à laquelle le compte est verrouillé (null = non verrouillé).
+  DateTimeColumn get lockedUntil => dateTime().nullable()();
+
   DateTimeColumn get createdAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
 

@@ -387,8 +387,6 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
   ) {
     final ttcByUser = <String, double>{};
     final countByUser = <String, int>{};
-    final nameByUser = <String, String>{};
-
     for (final o in paidOrders) {
       final amount = revenueByOrder[o.id] ?? 0;
       ttcByUser[o.waiterId] =

@@ -12,36 +12,150 @@ final _log = Logger('ritagestion.powersync');
 final _fatalResponsePattern = RegExp(r'^(22|23)|42501');
 
 /// Connecteur PowerSync → Supabase pour upload bidirectionnel.
+///
+/// [CRIT-C01] Implémente le refresh JWT via l'API GoTrue de Supabase.
+/// [HAUTE-C02] userId obligatoire (plus de fallback 'ritagestion-pos').
+/// [MOY-C03] invalidateCredentials() déclenche un re-fetch du token.
 class RitagestionPowerSyncConnector extends PowerSyncBackendConnector {
   RitagestionPowerSyncConnector(this._config);
 
   final CloudSyncConfig _config;
   String? _cachedJwt;
+  String? _refreshToken;
+  DateTime? _tokenExpiresAt;
+
+  /// Durée de marge avant expiration pour déclencher un refresh anticipé.
+  static const _refreshMargin = Duration(minutes: 2);
 
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
+    // Tenter un refresh si le token est expiré ou proche de l'expiration.
+    if (_shouldRefresh()) {
+      await _performTokenRefresh();
+    }
+
     final jwt = _cachedJwt ?? _config.jwtToken;
     final endpoint = _config.powerSyncUrl;
     if (jwt == null || jwt.isEmpty || endpoint == null || endpoint.isEmpty) {
       return null;
     }
 
+    // [HAUTE-C02] userId obligatoire — pas de fallback hardcodé.
+    final userId = _config.userId;
+    if (userId == null || userId.isEmpty) {
+      _log.warning(
+        'userId manquant dans CloudSyncConfig. '
+        'Définissez RITAGESTION_CLOUD_USER_ID pour éviter les collisions multi-tenant.',
+      );
+      return null;
+    }
+
     return PowerSyncCredentials(
       endpoint: endpoint,
       token: jwt,
-      userId: _config.userId ?? 'ritagestion-pos',
+      userId: userId,
     );
   }
 
   /// Met à jour le JWT (ex. refresh Supabase Auth côté app).
   void updateJwt(String? jwt) {
     _cachedJwt = jwt;
+    _tokenExpiresAt = jwt != null ? _extractExpiry(jwt) : null;
     invalidateCredentials();
+  }
+
+  /// Met à jour le refresh token (fourni par Supabase Auth).
+  void updateRefreshToken(String? token) {
+    _refreshToken = token;
   }
 
   @override
   void invalidateCredentials() {
-    // Le refresh sera géré par la couche auth Supabase (Sprint 5+).
+    // [MOY-C03] Force un re-fetch des credentials au prochain cycle sync.
+    _cachedJwt = null;
+    _tokenExpiresAt = null;
+    super.invalidateCredentials();
+  }
+
+  /// Vérifie si un refresh token est nécessaire.
+  bool _shouldRefresh() {
+    if (_refreshToken == null || _refreshToken!.isEmpty) return false;
+    if (_tokenExpiresAt == null) return true;
+    return DateTime.now().isAfter(_tokenExpiresAt!.subtract(_refreshMargin));
+  }
+
+  /// Effectue le refresh JWT via l'API GoTrue de Supabase.
+  Future<void> _performTokenRefresh() async {
+    final supabaseUrl = _config.supabaseUrl;
+    final anonKey = _config.supabaseAnonKey;
+    final refreshToken = _refreshToken;
+
+    if (supabaseUrl == null ||
+        anonKey == null ||
+        refreshToken == null ||
+        refreshToken.isEmpty) {
+      _log.fine('Refresh impossible : URL Supabase ou refresh token manquant.');
+      return;
+    }
+
+    final baseUrl = supabaseUrl.replaceAll(RegExp(r'/+$'), '');
+    final uri = Uri.parse('$baseUrl/auth/v1/token?grant_type=refresh_token');
+
+    try {
+      final response = await http.post(
+        uri,
+        headers: {
+          'apikey': anonKey,
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'refresh_token': refreshToken}),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final newAccessToken = body['access_token'] as String?;
+        final newRefreshToken = body['refresh_token'] as String?;
+        final expiresIn = body['expires_in'] as int?;
+
+        if (newAccessToken != null && newAccessToken.isNotEmpty) {
+          _cachedJwt = newAccessToken;
+          _tokenExpiresAt = expiresIn != null
+              ? DateTime.now().add(Duration(seconds: expiresIn))
+              : _extractExpiry(newAccessToken);
+          _log.info('JWT refreshed — expire dans ${expiresIn ?? "?"}s.');
+        }
+
+        if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+          _refreshToken = newRefreshToken;
+        }
+      } else {
+        _log.warning(
+          'Refresh JWT échoué: HTTP ${response.statusCode} — ${response.body}',
+        );
+      }
+    } catch (e) {
+      _log.warning('Erreur réseau refresh JWT: $e');
+    }
+  }
+
+  /// Extrait l'expiration (exp) du payload JWT (sans vérification de signature).
+  DateTime? _extractExpiry(String jwt) {
+    try {
+      final parts = jwt.split('.');
+      if (parts.length != 3) return null;
+      final payload = parts[1];
+      // Ajouter le padding base64 manquant.
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final data = jsonDecode(decoded) as Map<String, dynamic>;
+      final exp = data['exp'];
+      if (exp is int) {
+        return DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+      }
+    } catch (_) {
+      // JWT malformé — on ignore silencieusement.
+    }
+    return null;
   }
 
   @override

@@ -15,6 +15,9 @@ class CashSessions extends Table {
   TextColumn get status =>
       text().withDefault(const Constant('OPEN'))();
 
+  /// Soft-delete (audit trail) — security fix [MOY-D04].
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }

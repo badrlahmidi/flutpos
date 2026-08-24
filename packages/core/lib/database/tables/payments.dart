@@ -7,9 +7,11 @@ class Payments extends Table {
   TextColumn get id => text().clientDefault(newUuid)();
   TextColumn get orderId => text().references(Orders, #id)();
   TextColumn get paymentMethod => text()();
-  RealColumn get amount => real()();
+  RealColumn get amount => real().check(amount.isBiggerThanValue(0))();
   TextColumn get reference => text().nullable()();
   DateTimeColumn get paidAt => dateTime()();
+  /// Soft-delete (audit trail).
+  DateTimeColumn get deletedAt => dateTime().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};

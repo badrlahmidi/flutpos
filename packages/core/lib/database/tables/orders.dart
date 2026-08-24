@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import '../../utils/uuid_generator.dart';
 
 import 'cash_sessions.dart';
+import 'customers.dart';
 import 'restaurant_tables.dart';
 import 'users.dart';
 
@@ -13,8 +14,9 @@ class Orders extends Table {
   TextColumn get waiterId => text().references(Users, #id)();
   TextColumn get tableId =>
       text().nullable().references(RestaurantTables, #id)();
+  @ReferenceName('order_customer')
   TextColumn get customerId =>
-      text().nullable()(); // No hard FK to avoid circular dependencies for now, or we can use references
+      text().nullable().references(Customers, #id)();
   TextColumn get orderType => text()();
   TextColumn get source =>
       text().withDefault(const Constant('MANUAL'))();
@@ -22,13 +24,13 @@ class Orders extends Table {
   TextColumn get status =>
       text().withDefault(const Constant('OPEN'))();
   TextColumn get discountType => text().nullable()();
-  RealColumn get discountValue => real().nullable()();
+  RealColumn get discountValue => real().nullable().check(discountValue.isBiggerOrEqualValue(0))();
   TextColumn get discountReason => text().nullable()();
   @ReferenceName('order_discount_authorizer')
   TextColumn get discountAuthorizedBy =>
       text().nullable().references(Users, #id)();
   IntColumn get guestCount =>
-      integer().withDefault(const Constant(1))();
+      integer().withDefault(const Constant(1)).check(guestCount.isBiggerOrEqualValue(1))();
   /// Instructions globales (allergies, événement, etc.).
   TextColumn get notes => text().nullable()();
   /// Facture entreprise (scénario #34 / étape 7 Sprint 3).
@@ -37,6 +39,8 @@ class Orders extends Table {
   IntColumn get invoiceNumber => integer().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
+  /// Soft-delete : null = actif, non-null = supprimé logiquement (audit trail).
+  DateTimeColumn get deletedAt => dateTime().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
